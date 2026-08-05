@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>La Asturiana · Gestión Taller · Sem {{ sem.numero }} · {{ sem.rango_titulo }}</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800;900&display=swap');
+:root{
+  --r:#c0392b;--ro:#8e1a10;--rc:#fdecea;--rb:#f5b3af;
+  --v:#4a7c2f;--vc:#eaf3de;--vb:#b8d89a;
+  --a:#e65100;--ac:#fff3e0;--ab:#ffcc80;--n:#d97706;
+  --b:#1565c0;--bc:#e3f2fd;--bb:#90caf9;
+  --p:#6a1b9a;--pc:#f3e5f5;--pb:#ce93d8;
+  --g:#616161;--gc:#f5f5f5;
+  --lf:#1565c0;--mg:#e65100;--ca:#00897b;--cp:#6a1b9a;
+  --t:#1a1a1a;--s:#555;--s2:#999;--bd:#e2e2e2;--bg:#f2f2f2;--w:#fff;
+  --sh:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--t);font-size:14px;line-height:1.6}
+ 
+/* HDR */
+.hdr{background:#fff;border-bottom:3px solid var(--r);position:sticky;top:0;z-index:300;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+.hdr-in{max-width:1400px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.enm{font-family:'Inter Tight',sans-serif;font-size:19px;font-weight:900;color:var(--r);letter-spacing:-.02em;line-height:1}
+.esb{font-size:10px;color:var(--s);text-transform:uppercase;letter-spacing:.05em}
+.sep{width:1px;height:30px;background:var(--bd);flex-shrink:0}
+.htit{flex:1;min-width:200px}
+.htit h1{font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:700;line-height:1.2}
+.htit p{font-size:11px;color:var(--s);margin-top:1px}
+.hdact{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.bx{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid;white-space:nowrap;cursor:default}
+.bxv{background:var(--vc);color:var(--v);border-color:var(--vb)}
+.bxr{background:var(--rc);color:var(--r);border-color:var(--rb)}
+.bxg{background:var(--gc);color:var(--g);border-color:var(--bd)}
+.tcur{display:flex;align-items:center;background:#f0f0f0;border-radius:20px;padding:2px;border:1px solid var(--bd)}
+.tcur button{font-size:11px;font-weight:700;padding:3px 10px;border-radius:18px;border:none;cursor:pointer;transition:all .18s;background:transparent;color:var(--s)}
+.tcur button.on{background:var(--r);color:#fff}
+ 
+/* MAIN NAV — 3 pestañas de reunión */
+.mnav{background:#fff;border-bottom:1px solid var(--bd);position:sticky;top:69px;z-index:290;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.mnav-in{max-width:1400px;margin:0 auto;padding:0 24px;display:flex;overflow-x:auto}
+.mb{padding:13px 22px;font-size:13.5px;font-weight:700;color:var(--s);border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .18s;display:flex;align-items:center;gap:7px}
+.mb:hover{color:var(--t)}.mb.on{color:var(--r);border-bottom-color:var(--r);background:var(--rc)}
+ 
+/* SUB NAV — sub-pestañas dentro de cada área */
+.snav{background:#fafafa;border-bottom:1px solid var(--bd);position:sticky;top:117px;z-index:280}
+.snav-in{max-width:1400px;margin:0 auto;padding:0 24px;display:flex;overflow-x:auto}
+.sb{padding:10px 15px;font-size:12.5px;font-weight:500;color:var(--s);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .18s}
+.sb:hover,.sb.on{color:var(--r)}.sb.on{border-bottom-color:var(--r);font-weight:700}
+ 
+/* LAYOUT */
+.main{max-width:1400px;margin:0 auto;padding:22px 24px 64px}
+.area{display:none}.area.on{display:block}
+.tab{display:none}.tab.on{display:block}
+.sl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s);margin-bottom:14px;display:flex;align-items:center;gap:6px;padding-bottom:7px;border-bottom:1px solid var(--bd)}
+.mb18{margin-bottom:18px}
+.sec-title{font-family:'Inter Tight',sans-serif;font-size:19px;font-weight:800;margin:26px 0 4px;color:var(--t)}
+.sec-sub{font-size:12px;color:var(--s);margin-bottom:16px}
+ 
+/* CARDS */
+.card{background:#fff;border-radius:12px;border:1px solid var(--bd);box-shadow:var(--sh);padding:18px 22px}
+.ctit{font-size:13px;font-weight:700;color:var(--t);margin-bottom:12px}
+.cnota{font-size:11px;color:var(--s);background:#fafafa;border-left:3px solid var(--r);padding:7px 11px;border-radius:0 6px 6px 0;margin-top:10px;line-height:1.55}
+.cnota.v{border-left-color:var(--v)}.cnota.a{border-left-color:var(--a)}.cnota.b{border-left-color:var(--b)}
+.cnota.dat{border-left-color:var(--s2);background:#f7f7f7;color:var(--s)}
+.cnota.dat b{color:var(--t)}
+ 
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+@media(max-width:960px){.g3,.g4{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.g2,.g3,.g4{grid-template-columns:1fr}}
+ 
+/* KPI */
+.kpi{background:#fff;border-radius:12px;border:1px solid var(--bd);padding:15px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:12px 0 0 12px;background:var(--r)}
+.kpi.v::before{background:var(--v)}.kpi.a::before{background:var(--a)}.kpi.b::before{background:var(--b)}.kpi.g::before{background:var(--g)}.kpi.p::before{background:var(--p)}
+.kl{font-size:10px;color:var(--s);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.kv{font-family:'Inter Tight',sans-serif;font-size:22px;font-weight:800;line-height:1}
+.kpi.r .kv{color:var(--r)}.kpi.v .kv{color:var(--v)}.kpi.a .kv{color:var(--a)}.kpi.b .kv{color:var(--b)}.kpi.p .kv{color:var(--p)}
+.ks{font-size:11px;color:var(--s);margin-top:4px;line-height:1.4}
+.kcomp{margin-top:7px;padding-top:7px;border-top:1px solid #f0f0f0}
+.kcomp-row{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--s);margin-bottom:3px}
+.kcomp-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:var(--s2);flex-shrink:0}
+.kcomp-val{font-weight:700;color:var(--t);font-size:12px;text-align:right}
+.kcomp-val.r{color:var(--r)}.kcomp-val.v{color:var(--v)}.kcomp-val.a{color:var(--a)}
+.kd{font-size:10px;font-weight:700;margin-left:4px}
+.kd.up{color:#2e7d32}.kd.dn{color:var(--r)}
+.spb-leg{display:flex;gap:7px 14px;margin-top:7px;flex-wrap:wrap}
+.spb-li{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--s);font-weight:600}
+.spb-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.pt2{display:flex;gap:6px;margin-top:8px}
+.pt2-cell{flex:1;background:#fafafa;border:1px solid var(--bd);border-radius:6px;padding:4px 8px}
+.pt2-lbl{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--s)}
+.pt2-val{font-size:13px;font-weight:700;color:var(--t);line-height:1.2}
+.pt2-pct{font-size:8.5px;color:var(--s2);font-weight:500}
+ 
+/* TRIO TALLERES */
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+@media(max-width:900px){.trio{grid-template-columns:1fr}}
+.tc{border-radius:12px;padding:16px 18px;box-shadow:var(--sh);overflow:hidden;position:relative;background:#fff;border:1px solid var(--bd)}
+.tc::before{content:'';position:absolute;top:0;left:0;right:0;height:5px}
+.tc.lf::before{background:var(--lf)}.tc.mg::before{background:var(--mg)}.tc.ca::before{background:var(--ca)}
+.tc-name{font-family:'Inter Tight',sans-serif;font-size:14px;font-weight:800;margin-bottom:4px}
+.tc.lf .tc-name{color:var(--lf)}.tc.mg .tc-name{color:var(--mg)}.tc.ca .tc-name{color:var(--ca)}
+.tc-big{font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:900;line-height:1;margin-bottom:4px}
+.tc.lf .tc-big{color:var(--lf)}.tc.mg .tc-big{color:var(--mg)}.tc.ca .tc-big{color:var(--ca)}
+.tc-campo{font-size:12px;font-weight:600;color:var(--cp);padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid #f0f0f0}
+.tc-acum{margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0}
+.tc-ar{display:flex;justify-content:space-between;padding:2px 0;font-size:11px}
+.tc-al{color:var(--s)}.tc-av{font-weight:700;color:var(--t)}
+ 
+/* ACCORDION */
+.acc{border:1px solid var(--bd);border-radius:10px;margin-bottom:7px;overflow:hidden}
+.acc-hdr{background:#fafafa;padding:9px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none;transition:background .15s}
+.acc-hdr:hover{background:#f5f5f5}.acc-hdr.open{background:#fdecea}
+.acc-grp{font-size:13px;font-weight:600;flex:1}
+.acc-meta{display:flex;gap:10px;align-items:center;flex-shrink:0}
+.acc-tot{font-size:13px;font-weight:700;color:var(--r)}
+.acc-n{font-size:11px;color:var(--s)}
+.acc-arr{font-size:11px;color:var(--s);transition:transform .2s}.acc-hdr.open .acc-arr{transform:rotate(180deg)}
+.acc-body{display:none;overflow-x:auto}.acc-body.open{display:block}
+ 
+/* TABLA ITEMS */
+.itbl{width:100%;border-collapse:collapse;font-size:12px;min-width:600px}
+.itbl th{padding:6px 10px;text-align:left;font-weight:600;color:var(--s);background:#f7f7f7;border-bottom:2px solid var(--bd);white-space:nowrap}
+.itbl td{padding:6px 10px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+.itbl tr:last-child td{border-bottom:none}
+.itbl tr:hover td{background:#fafafa}
+.itbl .r{text-align:right}.itbl .c{text-align:center}.itbl .bold{font-weight:700}
+.du{color:var(--r);font-weight:700}.dd{color:var(--v);font-weight:700}
+.dnew{color:var(--b);font-size:10px;font-weight:700;background:var(--bc);padding:1px 5px;border-radius:3px}
+.dno{color:var(--g);font-size:10px;font-style:italic}
+.oc2{background:var(--ac);color:var(--a);font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px}
+.ineff-row.ineff-r td{background:var(--rc)!important}
+.ineff-row.ineff-a td{background:var(--ac)!important}
+.ineff-badge{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:4px;margin-top:2px;cursor:help}
+.ineff-badge.b-r{background:var(--r);color:#fff}
+.ineff-badge.b-a{background:var(--a);color:#fff}
+ 
+/* FILTROS CHIP */
+.chipbar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.chip{font-size:11.5px;font-weight:600;padding:6px 13px;border-radius:20px;border:1.5px solid var(--bd);background:#fff;color:var(--s);cursor:pointer;transition:all .15s;white-space:nowrap}
+.chip:hover{border-color:var(--r);color:var(--r)}
+.chip.on{background:var(--r);border-color:var(--r);color:#fff}
+.chip.allbtn.on{background:var(--t);border-color:var(--t)}
+ 
+/* CONSUMOS / MAQ ITEM */
+.maqg{margin-bottom:14px}
+.maq-item{background:#fafafa;border:1px solid var(--bd);border-radius:8px;margin-bottom:5px;overflow:hidden}
+.maq-hdr{padding:9px 13px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .15s}
+.maq-hdr:hover{background:#f5f5f5}.maq-hdr.open{background:#fdecea}
+.maq-name{flex:1;font-size:13px;font-weight:600}
+.maq-stats{display:flex;gap:14px;flex-shrink:0;align-items:center}
+.ms-l{font-size:10px;color:var(--s);text-transform:uppercase}
+.ms-v{font-size:13px;font-weight:700}
+.maq-body{display:none;padding:4px 13px 10px;font-size:12px}.maq-body.open{display:block}
+.mib{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #f0f0f0}
+.mib:last-child{border-bottom:none}
+.mib-rep{color:var(--t);font-weight:500}
+.mib-imp{font-weight:700;color:var(--r);min-width:70px;text-align:right}
+ 
+/* TOP MAQUINAS / RANKING GENERAL */
+.top-card{background:#fff;border-radius:12px;border:1px solid var(--bd);box-shadow:var(--sh);overflow:hidden}
+.rk-row{border-radius:8px;overflow:hidden;border:1px solid #f0f0f0;background:#fff;margin-bottom:5px;transition:box-shadow .15s}
+.rk-row:hover{box-shadow:var(--sh)}
+.rk-hdr{display:grid;grid-template-columns:30px 1fr 90px 60px;align-items:center;gap:10px;padding:9px 12px;cursor:pointer}
+.rk-body{display:none;background:#fafafa;border-top:1px solid var(--bd);padding:9px 14px}
+.rk-body.open{display:block}
+.rk-num{font-family:'Inter Tight',sans-serif;font-size:16px;font-weight:900;text-align:center;color:var(--s2)}
+.rk-num.n1{color:#c89000}.rk-num.n2{color:#8a929a}.rk-num.n3{color:#a06828}
+.rk-name{font-size:12.5px;font-weight:600;color:var(--t)}
+.rk-sub{font-size:10.5px;color:var(--s);margin-top:1px}
+.rk-hs{font-family:'Inter Tight',sans-serif;font-size:14px;font-weight:800;color:var(--t);text-align:right}
+.rk-bar-bg{height:5px;background:#eee;border-radius:3px;overflow:hidden;margin-top:3px}
+.rk-bar-fill{height:100%;border-radius:3px}
+.rk-delta{text-align:right;font-size:10.5px;font-weight:700}
+ 
+/* TABLA PRECIOS QUINCENA */
+.pt-wrap{overflow-x:auto}
+.pt{width:100%;border-collapse:collapse;font-size:12px;min-width:700px}
+.pt th{padding:7px 10px;text-align:left;font-weight:600;font-size:11px;color:var(--s);background:#f7f7f7;border-bottom:2px solid var(--bd);white-space:nowrap}
+.pt th.r{text-align:right}
+.pt td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+.pt tr:last-child td{border-bottom:none}
+.pt tr:hover td{background:#fafafa}
+.pt .r{text-align:right}
+.pt-rep{font-weight:600;color:var(--t);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pt-price{font-weight:600;display:block;font-size:12px}
+.pt-delta{font-size:10px;font-weight:700;display:block;margin-top:1px}
+.pt-delta.up{color:var(--r)}.pt-delta.dn{color:var(--v)}
+.pt-na{color:var(--s2);font-size:11px;font-style:italic}
+.pt-hi{background:#fdecea}
+.pt-mid{background:#fff8f0}
+ 
+/* ALERTAS */
+.al{display:flex;gap:11px;padding:12px 15px;border-radius:10px;border:1px solid;margin-bottom:9px}
+.al.r{background:var(--rc);border-color:var(--rb)}
+.al.a{background:var(--ac);border-color:var(--ab)}
+.al.v{background:var(--vc);border-color:var(--vb)}
+.al.b{background:var(--bc);border-color:var(--bb)}
+.al-ico{font-size:17px;flex-shrink:0;margin-top:1px}
+.al-tit{font-size:13px;font-weight:700;margin-bottom:3px}
+.al.r .al-tit{color:var(--ro)}.al.a .al-tit{color:#bf360c}.al.v .al-tit{color:#1b5e20}.al.b .al-tit{color:var(--b)}
+.al-txt{font-size:12px;color:var(--s);line-height:1.55}
+ 
+/* PILLS */
+.pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;display:inline-block;text-transform:uppercase}
+.pr{background:var(--rc);color:var(--ro)}.pa{background:var(--ac);color:var(--a)}
+.pv{background:var(--vc);color:var(--v)}.pb{background:var(--bc);color:var(--b)}
+.pg{background:var(--gc);color:var(--g);border:1px solid var(--bd)}.pp{background:var(--pc);color:var(--p)}
+ 
+/* MKT */
+.mkt{background:linear-gradient(135deg,#fff5f5,#fff);border:1px solid var(--rb);border-left:4px solid var(--r);border-radius:10px;padding:13px 16px;margin-bottom:10px}
+.mkt.v{background:linear-gradient(135deg,#f0fdf4,#fff);border-color:var(--vb);border-left-color:var(--v)}
+.mkt.a{background:linear-gradient(135deg,#fffbf0,#fff);border-color:var(--ab);border-left-color:var(--a)}
+.mkt-tit{font-size:12px;font-weight:700;color:var(--ro);margin-bottom:8px}
+.mkt.v .mkt-tit{color:var(--v)}.mkt.a .mkt-tit{color:var(--a)}
+.mkt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.mkt-item .ml{font-size:10px;color:var(--s);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.mkt-item .mv{font-size:13px;font-weight:700}
+.mv.r{color:var(--r)}.mv.v{color:var(--v)}.mv.a{color:var(--a)}.mv.g{color:var(--g)}
+.mkt-nota{font-size:11px;color:var(--s);margin-top:8px;line-height:1.5;border-top:1px solid rgba(0,0,0,.07);padding-top:8px}
+ 
+/* DATA ROW */
+.dr{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid #f0f0f0}
+.dr:last-child{border-bottom:none}
+.drk{width:18px;font-size:10px;color:#bbb;text-align:right;flex-shrink:0;font-weight:700}
+.drn{flex:1;font-size:13px;color:var(--t);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{width:75px;background:#f0f0f0;border-radius:3px;height:5px;flex-shrink:0}
+.bf{height:5px;border-radius:3px;background:var(--r)}
+.bf.v{background:var(--v)}.bf.b{background:var(--b)}
+.dv{font-size:12px;font-weight:700;min-width:70px;text-align:right;flex-shrink:0}
+.dv.r{color:var(--r)}.dv.b{color:var(--b)}
+ 
+/* RUBROS DRILL (Taller) */
+.rub-item{margin-bottom:5px;background:#fafafa;border-radius:8px;overflow:hidden;border:1px solid var(--bd)}
+.rub-head{display:flex;align-items:center;gap:8px;padding:8px 11px;cursor:pointer;user-select:none;transition:background .15s}
+.rub-head:hover{background:#f0f0f0}
+.rub-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.rub-name{font-size:12px;font-weight:700;color:var(--t);flex:1}
+.rub-pbar{width:55px;background:#e6e6e6;border-radius:3px;height:6px;overflow:hidden}
+.rub-pfill{height:100%;border-radius:3px}
+.rub-hs{font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:700;color:var(--t);min-width:52px;text-align:right}
+.rub-arr{font-size:11px;color:var(--s);width:12px;text-align:center}
+.rub-body{display:none;border-top:1px solid var(--bd)}
+.rub-body.open{display:block}
+.rub-body-inner{padding:6px 11px 8px}
+.rub-sub{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f5f5f5}
+.rub-sub:last-child{border-bottom:none}
+.rub-sub-rk{font-family:'Inter Tight',sans-serif;font-size:13px;font-weight:800;color:var(--s2);width:16px;text-align:center;flex-shrink:0}
+.rub-sub-name{font-size:10.5px;color:var(--s);flex:1}
+.rub-sub-bar{flex:2;background:#eee;border-radius:3px;height:5px;overflow:hidden}
+.rub-sub-fill{height:100%;border-radius:3px}
+.rub-sub-hs{font-size:10.5px;font-weight:600;color:var(--t);min-width:44px;text-align:right}
+ 
+/* MAQ LIST (top20 maquinas taller) */
+.maq-list{display:flex;flex-direction:column;gap:4px}
+.maqr-row{border-radius:8px;overflow:hidden;border:1px solid #f0f0f0;background:#fff}
+.maqr-head{display:grid;grid-template-columns:26px 1fr 90px;align-items:center;gap:8px;padding:8px 10px;cursor:pointer}
+.maqr-body{display:none;background:#fafafa;border-top:1px solid var(--bd);padding:8px 12px}
+.maqr-body.open{display:block}
+.maqr-n{font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:800;color:var(--s2);text-align:center}
+.maqr-n.top{color:var(--r)}
+ 
+/* SUPERVISORES / USR */
+.sv-item{background:#fafafa;border-radius:8px;padding:10px 14px;margin-bottom:8px;border-left:3px solid var(--cp)}
+.usr-card{background:#fafafa;border-radius:8px;padding:10px 13px;display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:10px;margin-bottom:7px;border:1px solid var(--bd)}
+.usr-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Inter Tight',sans-serif;font-size:14px;font-weight:800;color:#fff;flex-shrink:0}
+ 
+/* AG CARD (analisis general estilo) */
+.ag-card{background:#fff;border-radius:12px;padding:20px 22px;box-shadow:var(--sh);margin-bottom:14px;border:1px solid var(--bd)}
+.ag-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
+.ag-ico{font-size:24px;flex-shrink:0;line-height:1.3}
+.ag-tit{font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:800;margin-bottom:3px}
+.ag-badge{display:inline-block;padding:3px 11px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-left:auto;flex-shrink:0;white-space:nowrap}
+.ag-body{font-size:13px;color:var(--t);line-height:1.7}
+.ag-body p{margin-bottom:8px}
+.ag-card.rojo{border-left:5px solid var(--r)}.ag-card.rojo .ag-tit{color:var(--ro)}
+.ag-card.naranja{border-left:5px solid var(--a)}.ag-card.naranja .ag-tit{color:#92400e}
+.ag-card.verde{border-left:5px solid var(--v)}.ag-card.verde .ag-tit{color:#1b5e20}
+.ag-card.azul{border-left:5px solid var(--b)}.ag-card.azul .ag-tit{color:var(--b)}
+.badge-r{background:var(--rc);color:var(--ro)}.badge-n{background:var(--ac);color:#92400e}
+.badge-v{background:var(--vc);color:#1b5e20}.badge-a{background:var(--bc);color:var(--b)}
+.ag-tabla{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.ag-tabla th{background:#f5f5f5;padding:6px 10px;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--s)}
+.ag-tabla td{padding:7px 10px;border-bottom:1px solid #f0f0f0;color:var(--t)}
+.ag-tabla tr:last-child td{border-bottom:none}
+.ag-tabla tr:hover td{background:#fafafa}
+.ag-tabla .right{text-align:right}
+.exec-row{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px;line-height:1.6}
+.exec-row:last-child{border-bottom:none}
+.exec-ico{flex-shrink:0;font-size:16px;margin-top:1px}
+ 
+.footer{background:var(--r);color:rgba(255,255,255,.85);text-align:center;padding:14px 24px;font-size:11px}
+.footer strong{color:#fff}
+ 
+/* util */
+.mt8{margin-top:8px}.mt14{margin-top:14px}.mt18{margin-top:18px}
+.flex{display:flex}.wrap{flex-wrap:wrap}.gap8{gap:8px}
+</style>
+</head>
+<body>
+ 
+<header class="hdr">
+<div class="hdr-in">
+  <div class="logo">
+    <svg width="38" height="44" viewBox="0 0 88 104" fill="none">
+      <path d="M44 4L82 92H6L44 4Z" fill="#c0392b"/>
+      <rect x="4" y="72" width="80" height="8" rx="4" fill="#4a7c2f"/>
+      <rect x="10" y="82" width="68" height="7" rx="3.5" fill="#5a9a35"/>
+      <rect x="16" y="91" width="56" height="7" rx="3" fill="#6bb840"/>
+    </svg>
+    <div><div class="enm">La Asturiana</div><div class="esb">Servicios Agrícolas</div></div>
+  </div>
+  <div class="sep"></div>
+  <div class="htit">
+    <h1>Reunión de Equipo</h1>
+    <p><strong>Gestión Taller · Semana {{ sem.numero }} · {{ sem.rango_largo }}</strong></p>
+  </div>
+</div>
+</header>
+ 
+<nav class="snav area-nav" id="nav-taller" style="display:flex">
+<div class="snav-in">
+  <button class="sb on" onclick="goTab('taller','t-horas')" data-tab="t-horas">Horas Personal</button>
+  <button class="sb" onclick="goTab('taller','t-app')" data-tab="t-app">App Taller</button>
+</div>
+</nav>
+ 
+<main class="main">
+ 
+<!-- ══════════════════ ÁREA 2: GESTIÓN TALLER ══════════════════ -->
+<div id="area-taller" class="area on">
+ 
+<!-- a. HORAS PERSONAL -->
+<div id="tab-t-horas" class="tab on">
+<div class="sl mb18">⏱ Horas Personal — semana {{ sem.rango_corto_guion }}</div>
+ 
+<div class="mb18">
+  <div class="kpi r">
+    <div class="kl">Horas Totales — Semana</div>
+    <div class="kv">{{ kpi.horas_totales|fnum }}<span style="font-size:13px;font-weight:600;color:var(--s)"> ({{ kpi.horas_taller|fnum }} taller · {{ kpi.horas_campo|fnum }} campo)</span></div>
+    <div class="ks"><span class="kd {{ 'up' if kpi.horas_variacion_pct >= 0 else 'dn' }}">{{ '▲' if kpi.horas_variacion_pct >= 0 else '▼' }} {{ kpi.horas_variacion_pct|abs }}%</span> (sem. ant. {{ kpi.horas_totales_sa|fnum }})</div>
+    <div class="pt2" style="flex-wrap:wrap;margin-top:10px">
+      <div class="pt2-cell"><div class="pt2-lbl">Maquinaria propia</div><div class="pt2-val" style="color:var(--v)">{{ kpi.maquinaria_propia_hs|fnum }} hs</div><div class="pt2-pct">{{ kpi.maquinaria_propia_pct }}% (de hs con propiedad clasificada)</div></div>
+      <div class="pt2-cell"><div class="pt2-lbl">Maquinaria terceros</div><div class="pt2-val" style="color:var(--a)">{{ kpi.maquinaria_terceros_hs|fnum }} hs</div><div class="pt2-pct">{{ kpi.maquinaria_terceros_pct }}% (de hs con propiedad clasificada)</div></div>
+    </div>
+    <div class="spb-leg">
+      {% for t in talleres %}
+      <div class="spb-li"><div class="spb-dot" style="background:var(--{{ t.css }})"></div>{{ t.nombre }} {{ t.total_hs|fnum }} ({{ t.pct_del_total }}%)</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+ 
+<div class="trio">
+  {% for t in talleres %}
+  <div class="tc {{ t.css }}">
+    <div class="tc-name">🏭 Taller {{ t.nombre }}</div>
+    <div class="tc-big">{{ t.hs_taller|fnum }}<span style="font-size:16px;font-weight:600"> hs taller</span></div>
+    <div class="ks"><span class="kd {{ 'up' if t.variacion_pct >= 0 else 'dn' }}">{{ '▲' if t.variacion_pct >= 0 else '▼' }} {{ t.variacion_pct|abs }}%</span> (sem. ant. {{ t.hs_taller_sa|fnum }})</div>
+    <div class="tc-campo">+ {{ t.hs_campo|fnum }} hs campo {{ t.sigla }}</div>
+    <div class="tc-acum">
+      <div class="tc-ar"><span class="tc-al">Mecánicos activos</span><span class="tc-av">{{ t.dotacion_fija }}</span></div>
+      <div class="tc-ar"><span class="tc-al">Hs/día por mecánico</span><span class="tc-av">{{ t.hs_dia_mecanico|fnum }} hs</span></div>
+      <div class="tc-ar"><span class="tc-al">Mínimo esperado</span><span class="tc-av">{{ t.minimo_esperado|fnum }} hs</span></div>
+      <div class="tc-ar"><span class="tc-al">¿Llegó al mínimo?</span><span class="tc-av" style="color:var(--{{ 'v' if t.llego_al_minimo else 'r' }})">{{ '✔ Sí (+' if t.llego_al_minimo else '✖ No (' }}{{ (t.hs_taller - t.minimo_esperado)|fnum }} hs)</span></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+</div>
+ 
+<div class="g2 mb18">
+  <div class="card">
+    <div class="ctit">📈 Evolución Horas por Quincena — {{ sem.quincenas_rango_texto }}</div>
+    <div style="position:relative;height:230px"><canvas id="chartQuincena"></canvas></div>
+    <div class="cnota">🔺 <b>Pico de horas:</b> {{ notas.pico_horas }}</div>
+  </div>
+  <div class="card">
+    <div class="ctit">🔧 Rubros & Sub-Rubros — Top 10 con mayor horas esta semana</div>
+    <div id="rubros-drill"></div>
+    <div class="cnota">hs/d = promedio diario dedicado al rubro (total ÷ 48 hs, siendo 48 = 8 hs × 6 días, la semana completa de lunes a sábado).</div>
+  </div>
+</div>
+ 
+<div class="card mb18">
+  <div class="ctit">👷 Top horas mecánicos — Horas Taller, Horas Campo y Total General</div>
+  <div class="sec-sub" style="margin-bottom:10px">Tocá para ver el desglose · ordenado por horas totales (taller + campo) · comparación vs mínimo esperado de 48 hs/semana (8 hs × 6 días)</div>
+  <div id="rank-mecanicos-total"></div>
+</div>
+ 
+</div><!-- fin tab t-horas -->
+ 
+<!-- b. APP TALLER (dejar como está) -->
+<div id="tab-t-app" class="tab">
+<div class="sl mb18">📱 App Taller — actividad de carga de horas</div>
+ 
+<div class="g3 mb18">
+  <div class="kpi a">
+    <div class="kl">Usuarios Activos — Esta Semana</div>
+    <div class="kv">{{ kpi_app.usuarios_activos }}</div>
+    <div class="ks">Emails distintos con carga {{ sem.rango_corto }}</div>
+    <div class="kcomp">
+      <div class="kcomp-row"><span class="kcomp-lbl">Sem. anterior ({{ sem.rango_corto_anterior }})</span><span class="kcomp-val">{{ kpi_app.usuarios_activos_sa }} usuarios</span></div>
+      <div class="kcomp-row"><span class="kcomp-lbl">Registros / usuario</span><span class="kcomp-val">~{{ kpi_app.registros_por_usuario|fnum }}</span></div>
+    </div>
+  </div>
+  <div class="kpi v">
+    <div class="kl">Registros — Esta Semana</div>
+    <div class="kv">{{ kpi_app.registros_totales }}</div>
+    <div class="ks">Prom. <strong>{{ kpi_app.registros_por_dia|fnum }} reg/día</strong> · <strong>{{ kpi_app.registros_por_usuario|fnum }} reg/usuario/semana</strong></div>
+  </div>
+  <div class="kpi b">
+    <div class="kl">Horas Cargadas — Esta Semana</div>
+    <div class="kv">{{ kpi.horas_totales|fnum }}</div>
+    <div class="ks">Trabajo + Traslado + Preparación</div>
+    <div class="kcomp">
+      <div class="kcomp-row"><span class="kcomp-lbl">Sem. anterior ({{ sem.rango_corto_anterior }})</span><span class="kcomp-val">{{ kpi.horas_totales_sa|fnum }} hs</span></div>
+    </div>
+  </div>
+</div>
+ 
+ 
+<div class="card mb18">
+  <div class="ctit">⏱️ Horas por mecánico — Declaradas (AppSheet) vs Horas Chinagro (liquidación)</div>
+  <div class="sec-sub">Por usuario que carga · tocá para ver cada mecánico · compara lo declarado (total_hs_taller de la semana) con las horas de liquidación MO (lo que se le va a pagar). El resumido muestra horas cargadas por ese usuario esta semana y cuántos mecánicos cargó. 🔴 = diferencia ≥ 5 hs entre declarado y liquidación.</div>
+  <div id="horas-chinagro"></div>
+</div>
+ 
+<div class="g2 mb18">
+  <div class="card">
+    <div class="ctit">🟡 Nuevos esta semana</div>
+    <div class="sec-sub">Mecánicos cargados esta sem. que NO estaban la anterior</div>
+    <div id="mec-nuevos"></div>
+  </div>
+  <div class="card">
+    <div class="ctit">🔴 Ausentes esta semana</div>
+    <div class="sec-sub">Mecánicos que estaban la sem. ant. y NO aparecen esta</div>
+    <div id="mec-ausentes"></div>
+  </div>
+</div>
+<div id="mec-movidos" class="mb18"></div>
+ 
+<div class="card">
+  <div class="ctit">✅ Estados de Aprobación</div>
+  <div class="sec-sub">Solo las tareas cargadas en La Falda / Taller La Falda requieren aprobación de Toloza. Cargadas / por aprobar / rechazadas por usuario, semana {{ sem.rango_corto }}. Se ocultan los usuarios con todo aprobado y sin rechazos.</div>
+  <div id="usr-estados-lf"></div>
+</div>
+</div><!-- fin tab t-app -->
+ 
+</div><!-- fin area-taller -->
+ 
+<footer class="footer">
+  <strong>La Asturiana &mdash; Gestión Taller &mdash; 2026</strong>
+</footer>
+ 
+</main>
+<script>
+/* ============== NAVEGACION Y UTILIDADES ============== */
+function goTab(area,tabId){
+  var areaEl=document.getElementById('area-'+area);
+  areaEl.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
+  document.getElementById('nav-'+area).querySelectorAll('.sb').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('tab-'+tabId).classList.add('on');
+  document.querySelector('[data-tab="'+tabId+'"]').classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function toggleBody(head){var body=head.nextElementSibling;if(!body)return;body.classList.toggle('open');}
+function toggleEl(bodyId,arrId){
+  var b=document.getElementById(bodyId),a=document.getElementById(arrId);
+  if(!b)return;
+  var open=b.classList.contains('open');
+  b.classList.toggle('open');
+  if(a)a.textContent=open?"▸":"▾";
+}
+function toggleMaqDetail(id){
+  var el=document.getElementById(id);
+  var arr=document.getElementById(id+'-arr');
+  if(!el)return;
+  var isOpen=el.style.display==='block';
+  el.style.display=isOpen?'none':'block';
+  if(arr)arr.textContent=isOpen?'▸':'▾';
+}
+function set(id,h){var e=document.getElementById(id);if(e)e.innerHTML=h;}
+</script>
+<script>
+/* ============== DATOS TALLER ============== */
+const quincenas={{ quincenas|tojson }};
+const rubrosTaller={{ rubros_taller|tojson }};
+const mecTaller={{ mec_taller|tojson }};
+const mecCampo={{ mec_campo|tojson }};
+const mecAusentes={{ mec_ausentes|tojson }};
+const mecNuevos={{ mec_nuevos|tojson }};
+const estadosLF={{ estados_lf|tojson }};
+/* Horas por mecanico: declaradas (AppSheet) vs Horas Chinagro (liquidacion), semana en curso (dato generado automaticamente cada lunes).
+   PARA AGREGAR EL DESGLOSE DIARIO (declarado por dia vs Chinagro por dia): agregar a cada mecanico
+   un campo opcional "dias", con un objeto por dia de la semana, por ejemplo:
+     {m:"RESEO, ANGEL FABIAN", decl:47.5, chin:36, dias:[
+       {d:"Lun 20/7", decl:8, chin:6}, {d:"Mar 21/7", decl:7.5, chin:6}, ... ]}
+   Si "dias" esta presente, la fila del mecanico se puede tocar para ver el detalle dia por dia.
+   Si no esta presente (como ahora), se muestra igual que siempre, solo el total semanal.
+   Chinagro liquida por fecha_tarea, asi que el dato diario existe en Power BI -- falta traerlo
+   a esta consulta si se quiere habilitar el desglose. */
+const horasChinagroData={{ horas_chinagro_data|tojson }};
+</script>
+<script>
+/* ============== RENDER: TALLER ============== */
+function renderChartQuincena(){
+  new Chart(document.getElementById('chartQuincena'),{
+    type:'line',
+    data:{
+      labels:quincenas.map(q=>q.q),
+      datasets:[{label:'Horas totales',data:quincenas.map(q=>q.h),
+        borderColor:'#c0392b',backgroundColor:'rgba(192,57,43,.07)',
+        pointBackgroundColor:quincenas.map((q,i)=>i===quincenas.length-1?'#2e7d32':'#c0392b'),
+        pointRadius:5,borderWidth:2.5,tension:0.25,fill:true}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>ctx.parsed.y.toFixed(1)+' hs'}}},
+      scales:{
+        y:{ticks:{font:{size:10}},grid:{color:'rgba(0,0,0,0.04)'}},
+        x:{ticks:{font:{size:10}},grid:{display:false}}
+      }}
+  });
+}
+ 
+function renderRubrosDrillTop10(){
+  const sorted=rubrosTaller.slice().sort((a,b)=>b.h-a.h).slice(0,10);
+  const total=rubrosTaller.reduce((s,r)=>s+r.h,0);
+  let html='';
+  sorted.forEach((r,ri)=>{
+    const pct=Math.round(r.h/total*100);
+    const subsSorted=r.subs.slice().sort((a,b)=>b.h-a.h);
+    const maxSub=subsSorted.length?Math.max(...subsSorted.map(s=>s.h)):1;
+    let sHtml='';
+    subsSorted.forEach((s,si)=>{
+      const sp=Math.round(s.h/maxSub*100);
+      sHtml+=`<div class="rub-sub"><span class="rub-sub-rk">${si+1}</span>
+        <span class="rub-sub-name">${s.s}</span>
+        <div class="rub-sub-bar"><div class="rub-sub-fill" style="width:${sp}%;background:${r.col}"></div></div>
+        <span class="rub-sub-hs">${Math.round(s.h)} hs</span></div>`;
+    });
+    if(!sHtml)sHtml='<div style="font-size:11px;color:var(--s2);padding:6px 0">Sin sub-rubros registrados</div>';
+    const rHsDia=(r.h/48).toFixed(1).replace('.',',');
+    html+=`<div class="rub-item"><div class="rub-head" onclick="toggleEl('rub-${ri}','arr-${ri}')">
+      <div class="rub-dot" style="background:${r.col}"></div>
+      <span class="rub-name">${r.r}</span>
+      <div class="rub-pbar"><div class="rub-pfill" style="width:${pct}%;background:${r.col}"></div></div>
+      <span class="rub-hs">${Math.round(r.h)} hs</span>
+      <span class="rub-arr" id="arr-${ri}">▸</span></div>
+      <div class="rub-body" id="rub-${ri}"><div class="rub-body-inner">${sHtml}</div></div></div>`;
+  });
+  set('rubros-drill',html);
+}
+ 
+function renderRankMecanicosTotal(){
+  // combinar mecTaller (horas taller) + mecCampo (horas campo = hs+hs_t+hs_p)
+  const campoMap={};
+  mecCampo.forEach(m=>{campoMap[m.n]={campo:m.hs+m.hs_t+m.hs_p,detalle:m};});
+  const merged=mecTaller.map(m=>{
+    const c=campoMap[m.n];
+    const campoTot=c?c.campo:0;
+    return {n:m.n,t:m.t,col:m.col,hsTaller:m.hs,hsCampo:campoTot,hsSA:m.hsSA,
+      campoDet:c?c.detalle:null,total:m.hs+campoTot};
+  });
+  merged.sort((a,b)=>b.total-a.total);
+  const maxTot=merged[0].total;
+  let html='<div class="rk-mec">';
+  merged.forEach((m,i)=>{
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'';
+    const rnCls=i===0?'n1':i===1?'n2':i===2?'n3':'';
+    const barW=Math.round(m.total/maxTot*100);
+    const diff=m.hsTaller-m.hsSA;
+    const dt=m.hsSA===0?'<span style="color:var(--s2);font-size:10px">nuevo</span>':
+      diff>0?`<span style="color:var(--v);font-size:10px;font-weight:700">▲${Math.round(Math.abs(diff))}</span>`:
+      diff<0?`<span style="color:var(--r);font-size:10px;font-weight:700">▼${Math.round(Math.abs(diff))}</span>`:
+      '<span style="color:var(--s2);font-size:10px">—</span>';
+    const vs48=m.total-48;
+    const vs48Html=vs48>=0?`<span style="color:var(--v);font-weight:700">✔ +${Math.round(vs48)} hs sobre el mínimo (48)</span>`:`<span style="color:var(--r);font-weight:700">✖ ${Math.round(vs48)} hs bajo el mínimo (48)</span>`;
+    let campoHtml='<div style="font-size:11px;color:var(--s2);padding:4px 0">Sin salidas a campo esta semana</div>';
+    if(m.campoDet){
+      const cd=m.campoDet;
+      campoHtml=`<div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div><div style="font-size:9px;color:var(--s);text-transform:uppercase;font-weight:700">Trabajo</div><div style="font-size:14px;font-weight:800;color:var(--cp)">${Math.round(cd.hs)} hs</div></div>
+        <div><div style="font-size:9px;color:var(--s);text-transform:uppercase;font-weight:700">Traslado</div><div style="font-size:14px;font-weight:800;color:var(--mg)">${Math.round(cd.hs_t)} hs</div></div>
+        <div><div style="font-size:9px;color:var(--s);text-transform:uppercase;font-weight:700">Preparación</div><div style="font-size:14px;font-weight:800;color:var(--ca)">${Math.round(cd.hs_p)} hs</div></div>
+      </div>`;
+    }
+    html+=`<div class="rk-row">
+      <div class="rk-hdr" onclick="toggleBody(this)">
+        <div class="rk-num ${rnCls}">${medal}</div>
+        <div><div class="rk-name">${m.n}</div><div class="rk-sub" style="color:${m.col}">${m.t}</div></div>
+        <div style="text-align:right"><div class="rk-hs">${Math.round(m.total)} hs</div><div class="rk-bar-bg"><div class="rk-bar-fill" style="width:${barW}%;background:${m.col}"></div></div></div>
+        <div class="rk-delta">${dt}</div>
+      </div>
+      <div class="rk-body">
+        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--bd)">
+          <div><div style="font-size:9px;color:var(--s);text-transform:uppercase;font-weight:700">Total horas taller</div><div style="font-size:16px;font-weight:800">${Math.round(m.hsTaller)} hs</div></div>
+          <div><div style="font-size:9px;color:var(--s);text-transform:uppercase;font-weight:700">Total horas campo</div><div style="font-size:16px;font-weight:800;color:var(--cp)">${Math.round(m.hsCampo)} hs</div></div>
+          <div><div style="font-size:9px;color:var(--s);text-transform:uppercase;font-weight:700">Total general</div><div style="font-size:16px;font-weight:800;color:var(--r)">${Math.round(m.total)} hs</div></div>
+        </div>
+        <div style="font-size:11px;margin-bottom:8px">${vs48Html}</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--s);margin-bottom:5px">Desglose horas de campo</div>
+        ${campoHtml}
+      </div>
+    </div>`;
+  });
+  html+='</div>';
+  set('rank-mecanicos-total',html);
+}
+</script>
+<script>
+/* ============== RENDER: APP TALLER (alertas) ============== */
+function buildMecAlertas(){
+  const ausNames=mecAusentes.map(a=>a.m);
+  const nuevNames=mecNuevos.map(n=>n.m);
+  const movidos=mecNuevos.filter(n=>ausNames.indexOf(n.m)>=0).map(n=>{
+    const a=mecAusentes.filter(x=>x.m===n.m)[0];
+    return {m:n.m, de:(a?a.usrNm:'—'), a:n.usrNm, hs:n.hs};
+  });
+  const movNames=movidos.map(x=>x.m);
+  const nuevosReal=mecNuevos.filter(n=>movNames.indexOf(n.m)<0);
+  const ausentesReal=mecAusentes.filter(a=>movNames.indexOf(a.m)<0);
+  set('mec-nuevos', nuevosReal.length ? '<div style="display:flex;flex-direction:column;gap:5px">'+
+    nuevosReal.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--vc);border-radius:6px;border-left:3px solid var(--v)">
+      <span style="font-size:11.5px;font-weight:600;flex:1">${m.m}</span>
+      <span style="font-size:10px;color:var(--s)">${m.usrNm}</span>
+      <span style="background:var(--vc);color:var(--v);padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700">${m.hs} hs</span>
+    </div>`).join('')+'</div>' : '<div style="font-size:11.5px;color:var(--s);padding:6px 2px">Sin altas reales esta semana.</div>');
+  set('mec-ausentes', ausentesReal.length ? '<div style="display:flex;flex-direction:column;gap:5px">'+
+    ausentesReal.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--rc);border-radius:6px;border-left:3px solid var(--r)">
+      <span style="font-size:11.5px;font-weight:600;flex:1">${m.m}</span>
+      <span style="font-size:10px;color:var(--s)">${m.usrNm}</span>
+      <span style="background:var(--rc);color:var(--r);padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700">ant: ${m.hsSA} hs</span>
+    </div>`).join('')+'</div>' : '<div style="font-size:11.5px;color:var(--s);padding:6px 2px">Sin ausencias reales esta semana.</div>');
+  set('mec-movidos', movidos.length ? `<div class="al b"><div class="al-ico">🔁</div><div class="al-txt"><strong>Cambiaron de cuenta que los carga (no es alta ni ausencia):</strong> `+
+    movidos.map(m=>`${m.m} — esta semana lo carga <strong>${m.a}</strong> (${m.hs} hs), antes lo cargaba ${m.de}`).join(' · ')+'.</div></div>' : '');
+}
+ 
+ 
+function buildEstadosLF(){
+  set('usr-estados-lf','<div style="display:flex;flex-direction:column;gap:5px">'+
+    estadosLF.filter(u=>!(u.pe===0&&u.re===0)).map(u=>{
+      const hayPend=u.pe>0;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:${hayPend?'var(--ac)':'#fafafa'};border-radius:6px;border-left:3px solid ${hayPend?'var(--a)':'var(--bd)'};flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:700;min-width:130px">${u.nm}</span>
+        <span style="background:var(--vc);color:var(--v);padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700">✔ ${u.ap} aprobados</span>
+        ${u.pe>0?`<span style="background:var(--ac);color:var(--a);padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700">⏳ ${u.pe} pendientes</span>`:''}
+        ${u.re>0?`<span style="background:var(--rc);color:var(--r);padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700">✖ ${u.re} rechazados</span>`:''}
+        ${hayPend?'<span style="font-size:10px;color:var(--a);margin-left:auto;font-weight:600">⚠ Requiere acción TOLOZA</span>':''}
+      </div>`;
+    }).join('')+'</div>');
+}
+ 
+</script>
+<script>
+/* ============== RENDER: APP TALLER ============== */
+function buildHorasChinagro(){
+  const r1=n=>Math.round(n);
+  const fnum=n=>(''+r1(n)).replace('.',',');
+  let html='<div style="display:flex;flex-direction:column;gap:5px">';
+  horasChinagroData.forEach((u,ui)=>{
+    const declTot=u.mecs.reduce((s,m)=>s+m.decl,0);
+    const nMec=u.mecs.length;
+    const mecRows=u.mecs.slice().sort((a,b)=>b.decl-a.decl).map((m,mi)=>{
+      if(m.chin===null){
+        return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f0f0f0">
+          <span style="font-size:10.5px;color:var(--s);flex:1;min-width:170px">${m.m}</span>
+          <span style="font-size:10.5px;font-weight:600;min-width:70px;text-align:right">${fnum(m.decl)} hs</span>
+          <span style="font-size:10.5px;font-weight:600;min-width:70px;text-align:right;color:var(--s2)">s/d</span>
+          <span style="font-size:9px;color:var(--s2);min-width:50px;text-align:right">s/d</span></div>`;
+      }
+      // Rojo = declaro mas horas de taller (AppSheet) que lo liquidado en Chinagro (senal a revisar).
+      // Verde = declaro igual o menos (normal: Chinagro suele incluir horas pagas fuera de taller).
+      const gap=m.decl-m.chin;
+      const esRojo=gap>0;
+      const col=esRojo?'var(--r)':'var(--v)';
+      const sign=gap>0?'+':gap<0?'−':'±';
+      const hasDaily=Array.isArray(m.dias)&&m.dias.length>0;
+      const detId='dchin-'+ui+'-'+mi;
+      const dailyHtml=hasDaily?m.dias.map(d=>{
+        const dgap=d.decl-d.chin, dRojo=dgap>0, dcol=dRojo?'var(--r)':'var(--v)', dsign=dgap>0?'+':dgap<0?'−':'±';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0 3px 14px;border-bottom:1px dashed #eee">
+          <span style="font-size:9.5px;color:var(--s);flex:1;min-width:100px">${d.d}</span>
+          <span style="font-size:9.5px;font-weight:600;min-width:60px;text-align:right;color:${dcol}">${fnum(d.decl)} hs</span>
+          <span style="font-size:9.5px;font-weight:600;min-width:60px;text-align:right;color:var(--s)">${fnum(d.chin)} hs</span>
+          <span style="font-size:9.5px;font-weight:800;min-width:45px;text-align:right;color:${dcol}">${dsign}${fnum(Math.abs(dgap))}hs</span></div>`;
+      }).join(''):'';
+      return `<div style="border-bottom:1px solid #f0f0f0">
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0${hasDaily?';cursor:pointer':''}"${hasDaily?` onclick="toggleMaqDetail('${detId}')"`:''}>
+          <span style="font-size:10.5px;color:var(--s);flex:1;min-width:170px">${m.m}${m.split?' <span style="font-size:8.5px;color:var(--s2)">(carga compartida)</span>':''}${hasDaily?` <span id="${detId}-arr" style="color:var(--s2);font-size:9px">▸</span>`:''}</span>
+          <span style="font-size:10.5px;font-weight:700;min-width:70px;text-align:right;color:${col}">${fnum(m.decl)} hs</span>
+          <span style="font-size:10.5px;font-weight:600;min-width:70px;text-align:right;color:var(--s)">${fnum(m.chin)} hs</span>
+          <span style="font-size:11px;font-weight:800;min-width:50px;text-align:right;color:${col}">${sign}${fnum(Math.abs(gap))}hs</span>
+        </div>
+        ${hasDaily?`<div id="${detId}" style="display:none;padding:2px 0 4px">${dailyHtml}</div>`:''}
+      </div>`;
+    }).join('');
+    html+=`<div class="rk-row">
+      <div class="rk-hdr" onclick="toggleBody(this)" style="grid-template-columns:36px 1fr auto auto">
+        <div class="usr-av" style="background:${u.col};width:30px;height:30px;font-size:12px">${u.nm.charAt(0)}</div>
+        <div><div style="font-size:12px;font-weight:600">${u.nm}</div><div style="font-size:10px;color:var(--s)">${u.email}</div></div>
+        <div style="text-align:right;padding-right:8px"><div style="font-size:15px;font-weight:800">${fnum(declTot)} hs</div><div style="font-size:9.5px;color:var(--s)">cargadas esta sem.</div></div>
+        <div style="text-align:right"><div style="font-size:12px;font-weight:700">${nMec} mec</div><div style="font-size:9.5px;color:var(--s)">cargó esta sem.</div></div>
+      </div>
+      <div class="rk-body">
+        <div style="display:flex;align-items:center;gap:8px;padding:2px 0 6px;border-bottom:2px solid var(--bd);font-size:8.5px;font-weight:700;text-transform:uppercase;color:var(--s)">
+          <span style="flex:1;min-width:170px">Mecánico</span>
+          <span style="min-width:70px;text-align:right">AppSheet</span>
+          <span style="min-width:70px;text-align:right">Chinagro</span>
+          <span style="min-width:50px;text-align:right">Dif.</span>
+        </div>${mecRows}</div>
+    </div>`;
+  });
+  html+='</div>';
+  set('horas-chinagro',html);
+}
+</script>
+<script>
+/* ============== INICIALIZACION ============== */
+function build(){
+  renderChartQuincena();
+  renderRubrosDrillTop10();
+  renderRankMecanicosTotal();
+  buildHorasChinagro();
+  buildMecAlertas();
+  buildEstadosLF();
+}
+build();
+</script>
+</body>
+</html>
