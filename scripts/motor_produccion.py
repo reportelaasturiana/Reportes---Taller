@@ -33,7 +33,19 @@ from motor_agregacion import (
     obtener_access_token_service_principal, cargar_desde_power_bi_service,
     parsear_fecha_pbi_service,
 )
-from formato import fnum, datos_semana
+from formato import fnum, datos_semana, MESES_LARGO
+ 
+DIAS_SEMANA = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+ 
+ 
+def _generado_en_texto():
+    """Fecha/hora de generación en texto, en hora Argentina (UTC-3 todo el año,
+    no tiene horario de verano). GitHub Actions corre en UTC, por eso se resta
+    a mano en vez de usar la zona horaria del sistema."""
+    ahora_ar = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+    dia = DIAS_SEMANA[ahora_ar.weekday()]
+    return (f"{dia} {ahora_ar.day} de {MESES_LARGO[ahora_ar.month - 1]} de {ahora_ar.year}, "
+            f"{ahora_ar.strftime('%H:%M')} hs (hora Argentina)")
  
 OUTPUT_DIR = BASE.parent / "docs"
 TEMPLATES_DIR = BASE / "templates"
@@ -299,16 +311,19 @@ def construir_todo():
                         quincenas_desde=f["desde_anio"])
     notas_taller = {"pico_horas": generar_nota_pico_horas(quincenas, f["hoy"])}
     notas_maquinaria = {"lider_supervisores": generar_nota_lider_supervisores(top_supervisores)}
+    generado_en = _generado_en_texto()
  
     ctx_taller = {
         "sem": sem, "kpi": kpi, "kpi_app": kpi_app, "talleres": talleres, "notas": notas_taller,
         "quincenas": quincenas, "rubros_taller": rubros_taller, "mec_taller": mec_taller,
         "mec_campo": mec_campo, "mec_ausentes": mec_ausentes, "mec_nuevos": mec_nuevos,
         "estados_lf": estados_lf, "horas_chinagro_data": horas_chinagro_data,
+        "generado_en": generado_en,
     }
     ctx_maquinaria = {
         "sem": sem, "notas": notas_maquinaria, "maquinas_top": maquinas_top,
         "comp_mirar": comp_mirar, "fluidos": fluidos, "top_supervisores": top_supervisores,
+        "generado_en": generado_en,
     }
     return ctx_taller, ctx_maquinaria
  
