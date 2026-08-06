@@ -310,14 +310,18 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 <header class="hdr">
 <div class="hdr-in">
   <div class="logo">
-    <img src="logo.png" alt="La Asturiana" style="width:34px;height:44px;object-fit:contain">
+    <svg width="38" height="44" viewBox="0 0 88 104" fill="none">
+      <path d="M44 4L82 92H6L44 4Z" fill="#c0392b"/>
+      <rect x="4" y="72" width="80" height="8" rx="4" fill="#4a7c2f"/>
+      <rect x="10" y="82" width="68" height="7" rx="3.5" fill="#5a9a35"/>
+      <rect x="16" y="91" width="56" height="7" rx="3" fill="#6bb840"/>
+    </svg>
     <div><div class="enm">La Asturiana</div><div class="esb">Servicios Agrícolas</div></div>
   </div>
   <div class="sep"></div>
   <div class="htit">
     <h1>Reunión de Equipo</h1>
     <p><strong>Análisis de Maquinaria · Semana {{ sem.numero }} · {{ sem.rango_largo }}</strong></p>
-    <p style="opacity:.75">🕒 Actualizado: {{ generado_en }}</p>
   </div>
 </div>
 </header>
