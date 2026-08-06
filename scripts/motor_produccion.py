@@ -15,6 +15,7 @@ claude/diseno-automatizacion-html-taller.md, v16, en el proyecto de Claude).
 """
 import datetime
 import os
+import shutil
 import sys
 from pathlib import Path
  
@@ -49,6 +50,7 @@ def _generado_en_texto():
  
 OUTPUT_DIR = BASE.parent / "docs"
 TEMPLATES_DIR = BASE / "templates"
+ASSETS_DIR = BASE / "assets"
  
  
 # ---------------------------------------------------------------------------
@@ -337,10 +339,26 @@ def render(nombre_template, contexto, salida):
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUTPUT_DIR / salida).write_text(html, encoding="utf-8")
     print(f"Generado: {OUTPUT_DIR / salida} ({len(html)} bytes)")
+
+
+def copiar_estaticos():
+    """Copia los archivos de scripts/assets/ junto a los HTML generados.
+
+    El logo va como archivo aparte y NO embebido en base64 dentro del HTML: con un
+    data:image/png;base64 adentro, GitHub Pages deja el despliegue clavado en
+    "deployment_queued" y actions/deploy-pages aborta a los 10 minutos. Verificado
+    el 2026-08-06: mismo workflow y mismos datos, 4 corridas OK sin el base64 y 4
+    corridas falladas con el base64, alternadas."""
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for archivo in sorted(ASSETS_DIR.iterdir()):
+        if archivo.is_file():
+            shutil.copy2(archivo, OUTPUT_DIR / archivo.name)
+            print(f"Copiado: {OUTPUT_DIR / archivo.name} ({archivo.stat().st_size} bytes)")
  
  
 if __name__ == "__main__":
     ctx_taller, ctx_maquinaria = construir_todo()
+    copiar_estaticos()
     render("gestion_taller.html.j2", ctx_taller, "Gestion_Taller.html")
     render("reunion_maquinaria.html.j2", ctx_maquinaria, "Reunion_Semanal_Maquinaria.html")
     # Página de entrada simple con los 2 links, para que GitHub Pages tenga un index.
