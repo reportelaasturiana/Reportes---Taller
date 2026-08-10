@@ -2,10 +2,16 @@ name: Generar reportes semanales del taller
 
 on:
   schedule:
-    # Lunes 09:00 UTC = 06:00 hora Argentina (ART, UTC-3). Ajustar si se quiere
-    # otro horario -- el formato es "minuto hora dia-mes mes dia-semana" y "1"
-    # en el ultimo campo es lunes.
-    - cron: '0 9 * * 1'
+    # Lunes 15:00 UTC = 12:00 del mediodia, hora Argentina (ART, UTC-3 todo el
+    # año, no tiene horario de verano). El formato es "minuto hora dia-mes mes
+    # dia-semana" y "1" en el ultimo campo es lunes.
+    #
+    # Ojo: los cron de GitHub Actions no son puntuales. Se encolan y arrancan
+    # cuando hay capacidad, siempre TARDE, nunca antes. El 10/8/2026 este mismo
+    # workflow salio 2h37m despues de la hora pautada. Si hace falta que salga
+    # mas cerca del mediodia, conviene adelantarlo y no pedirlo en punto: las
+    # horas exactas (:00) son las mas congestionadas.
+    - cron: '0 15 * * 1'
   workflow_dispatch: {}  # permite tambien correrlo a mano desde la pestaña "Actions" de GitHub
 
 permissions:
