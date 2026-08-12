@@ -327,7 +327,7 @@ UMBRAL_MONTO_COMPMIRAR = 30000
  
  
 def construir_comp_mirar(df_consumos, precios_repuesto=None, ventana_dias=180,
-                          umbral_monto=UMBRAL_MONTO_COMPMIRAR):
+                          umbral_monto=UMBRAL_MONTO_COMPMIRAR, hoy=None):
     """df_consumos: filas de ConsumosyReparaciones (todos los rubros, no solo fluidos),
     con columnas maquina, tipo_maquina, rubro, repuesto, fecha_mov (fecha del movimiento
     = cuando se entrego el repuesto para esa maquina, movim.fecha en La Falda; NO la
@@ -342,7 +342,10 @@ def construir_comp_mirar(df_consumos, precios_repuesto=None, ventana_dias=180,
     ahora además filtrado a repuestos cuyo precio unitario supera `umbral_monto` (pedido
     explícito: un insumo barato que se repite no amerita discutirlo en la reunión).
     Devuelve una lista de secciones por tipo de maquinaria (mismo criterio de fluidos)."""
-    hoy = df_consumos["fecha_mov"].max()
+    # Conviene pasar `hoy` explicitamente: si se deja que salga del maximo del
+    # extracto, una sola fila con fecha cargada mal (movim.fecha llego a tener un
+    # año 2601) corre la ventana a un futuro lejano y la tabla sale vacia.
+    hoy = pd.Timestamp(hoy) if hoy is not None else df_consumos["fecha_mov"].max()
     desde = hoy - datetime.timedelta(days=ventana_dias)
     df = df_consumos[df_consumos["fecha_mov"] >= desde].copy()
  

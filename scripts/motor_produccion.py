@@ -51,6 +51,28 @@ def _generado_en_texto():
 OUTPUT_DIR = BASE.parent / "docs"
 TEMPLATES_DIR = BASE / "templates"
 ASSETS_DIR = BASE / "assets"
+
+# Nada anterior a esto se considera una fecha de movimiento valida.
+FECHA_MOV_MINIMA = pd.Timestamp("2015-01-01")
+
+
+def limpiar_fechas_mov(df, hoy, etiqueta):
+    """Descarta las filas con fecha de movimiento imposible.
+
+    ConsumosyReparaciones[fecha] sale de movim.fecha, que en La Falda se carga a
+    mano y tiene basura: al 12/8/2026 habia 12 filas posteriores a 2027 (la peor,
+    año 2601), 28 anteriores a 2020 y 45 con fecha futura sobre 59.091 movimientos.
+
+    Una sola de esas rompe el reporte entero: construir_comp_mirar calcula la
+    ventana de 180 dias hacia atras desde la fecha MAXIMA del extracto, asi que con
+    el año 2601 adentro la ventana caia en el año 2600 y la tabla salia vacia."""
+    df = df.dropna(subset=["fecha_mov"]).copy()
+    limite = pd.Timestamp(hoy)
+    valida = (df["fecha_mov"] >= FECHA_MOV_MINIMA) & (df["fecha_mov"] <= limite)
+    if (~valida).any():
+        print(f"  {etiqueta}: descartadas {(~valida).sum()} filas con fecha_mov "
+              f"fuera de {FECHA_MOV_MINIMA.date()}..{limite.date()}")
+    return df[valida]
  
  
 # ---------------------------------------------------------------------------
@@ -285,20 +307,21 @@ def construir_todo():
     # --- Fluidos (ConsumosyReparaciones, rubro LUBRICANTE, año actual) ---
     df_fluidos_raw = pbi(dax_fluidos(f["desde_anio"]))
     df_fluidos_raw["fecha_mov"] = parsear_fecha_pbi_service(df_fluidos_raw["fecha_mov"])
-    df_fluidos_raw = df_fluidos_raw.dropna(subset=["fecha_mov"])
+    df_fluidos_raw = limpiar_fechas_mov(df_fluidos_raw, f["hoy"], "fluidos")
     df_fluidos_raw["tipofluido"] = df_fluidos_raw["repuesto"].apply(clasificar_fluido)
     fluidos = construir_fluidos(df_fluidos_raw[df_fluidos_raw["tipofluido"].notna()], anio=f["hoy"].year)
  
     # --- compMirar (ConsumosyReparaciones, todos los rubros salvo eléctricos) ---
     df_todos_raw = pbi(dax_repuestos_todos(f["desde_180d"]))
     df_todos_raw["fecha_mov"] = parsear_fecha_pbi_service(df_todos_raw["fecha_mov"])
-    df_todos_raw = df_todos_raw.dropna(subset=["fecha_mov"])
+    df_todos_raw = limpiar_fechas_mov(df_todos_raw, f["hoy"], "compMirar")
  
     df_precios = pbi(DAX_PRECIOS_REPUESTOS).dropna(subset=["repuesto"])
     df_precios["precio_prom"] = pd.to_numeric(df_precios["precio_prom"], errors="coerce")
     precios_repuesto = df_precios.drop_duplicates("repuesto").set_index("repuesto")["precio_prom"]
  
-    comp_mirar = construir_comp_mirar(df_todos_raw, precios_repuesto=precios_repuesto)
+    comp_mirar = construir_comp_mirar(df_todos_raw, precios_repuesto=precios_repuesto,
+                                      hoy=f["hoy"])
  
     # --- Quincenas (Horas_Personal_AppSheet TALLER por día + Calendario) ---
     df_horas_dia = pbi(dax_horas_taller_dia(f["desde_anio"]))
