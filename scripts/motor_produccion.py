@@ -155,16 +155,24 @@ SELECTCOLUMNS(
 """
  
  
-# IMPORTANTE -- que fecha se usa. ConsumosyReparaciones tiene dos fechas y NO son
-# lo mismo:
-#   [fechfaccargas] = fecha de la FACTURA de compra del insumo (cuando se compro).
-#   [fecha]         = fecha del MOVIMIENTO, o sea cuando el pañolero entrego el
-#                     insumo para esa maquina. Es movim.fecha en La Falda.
-# Los dos reportes hablan de cada cuanto se le cambia un repuesto A UNA MAQUINA,
-# asi que la fecha correcta es [fecha]. Hasta el 10/8/2026 se usaba
-# [fechfaccargas] por error y las fechas que se mostraban eran de compra.
-# Verificado contra La Falda fila por fila: idmovdet 18999 -> modelo [fecha]
-# 2025-09-15 == movim.fecha 2025-09-15 (y [fechfaccargas] daba 2025-09-12).
+# OJO CON LA FECHA -- ninguna de las que hay en el modelo es la correcta todavia.
+#
+# Lo que se quiere mostrar es cuando se le puso el repuesto a la maquina, que en
+# la pantalla de La Falda es la columna "Fe.Retiro" y en la base es
+# movdet.fechamovim. Verificado fila por fila el 12/8/2026 contra la pantalla del
+# TRACTOR 62 AGCO ALIS 6.125: 7 de 7 filas de junio coinciden (04/06 x3, 05/06 x4).
+#
+# El problema es que ConsumosyReparaciones NO trae esa columna. De sus 37 columnas,
+# las unicas fechas son:
+#   [fechfaccargas] = fecha de FACTURA de compra del lote (la columna "Fe.Factura").
+#   [fecha]         = movim.fecha, la fecha de cabecera del vale, cargada a mano.
+#                     Difiere de Fe.Retiro en el 64% de los movimientos de 2026.
+#   [acfechfaccargas] = otra fecha de factura.
+#
+# Se usa [fecha] como la menos mala mientras tanto: acierta el ~36% de las veces,
+# contra practicamente nunca de [fechfaccargas], que se usaba hasta el 10/8/2026.
+# PENDIENTE: agregar movdet.fechamovim a ConsumosyReparaciones en Power Query y
+# cambiar las dos consultas de abajo para que la usen.
 def dax_fluidos(desde_anio):
     return f"""
 EVALUATE

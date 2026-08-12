@@ -329,9 +329,9 @@ UMBRAL_MONTO_COMPMIRAR = 30000
 def construir_comp_mirar(df_consumos, precios_repuesto=None, ventana_dias=180,
                           umbral_monto=UMBRAL_MONTO_COMPMIRAR, hoy=None):
     """df_consumos: filas de ConsumosyReparaciones (todos los rubros, no solo fluidos),
-    con columnas maquina, tipo_maquina, rubro, repuesto, fecha_mov (fecha del movimiento
-    = cuando se entrego el repuesto para esa maquina, movim.fecha en La Falda; NO la
-    fecha de factura de compra, ver el comentario en dax_fluidos de motor_produccion.py).
+    con columnas maquina, tipo_maquina, rubro, repuesto, fecha_mov (la fecha en que se
+    le puso el repuesto a la maquina; hoy es una aproximacion, ver el comentario largo
+    sobre las fechas arriba de dax_fluidos en motor_produccion.py).
     precios_repuesto: Series/dict {repuesto: precio_unitario}, de
     Compras[precio_Unitario] promediado por repuesto -- si no se pasa, no se filtra por
     monto (deja pasar todo, para no romper si todavía no se tiene el extracto de precios).
