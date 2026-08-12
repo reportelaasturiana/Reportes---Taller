@@ -133,19 +133,29 @@ SELECTCOLUMNS(
 """
  
  
+# IMPORTANTE -- que fecha se usa. ConsumosyReparaciones tiene dos fechas y NO son
+# lo mismo:
+#   [fechfaccargas] = fecha de la FACTURA de compra del insumo (cuando se compro).
+#   [fecha]         = fecha del MOVIMIENTO, o sea cuando el pañolero entrego el
+#                     insumo para esa maquina. Es movim.fecha en La Falda.
+# Los dos reportes hablan de cada cuanto se le cambia un repuesto A UNA MAQUINA,
+# asi que la fecha correcta es [fecha]. Hasta el 10/8/2026 se usaba
+# [fechfaccargas] por error y las fechas que se mostraban eran de compra.
+# Verificado contra La Falda fila por fila: idmovdet 18999 -> modelo [fecha]
+# 2025-09-15 == movim.fecha 2025-09-15 (y [fechfaccargas] daba 2025-09-12).
 def dax_fluidos(desde_anio):
     return f"""
 EVALUATE
 SELECTCOLUMNS(
     FILTER('ConsumosyReparaciones',
         'ConsumosyReparaciones'[rubro] = "LUBRICANTE" &&
-        'ConsumosyReparaciones'[fechfaccargas] >= {_d(desde_anio)} &&
+        'ConsumosyReparaciones'[fecha] >= {_d(desde_anio)} &&
         NOT ISBLANK('ConsumosyReparaciones'[maquina])
     ),
     "maquina", 'ConsumosyReparaciones'[maquina],
     "tipo_maquina", 'ConsumosyReparaciones'[tipo_maquina],
     "repuesto", 'ConsumosyReparaciones'[repuesto],
-    "fechfaccargas", 'ConsumosyReparaciones'[fechfaccargas],
+    "fecha_mov", 'ConsumosyReparaciones'[fecha],
     "id_insumo", 'ConsumosyReparaciones'[id_insumo]
 )
 """
@@ -156,7 +166,7 @@ def dax_repuestos_todos(desde_180d):
 EVALUATE
 SELECTCOLUMNS(
     FILTER('ConsumosyReparaciones',
-        'ConsumosyReparaciones'[fechfaccargas] >= {_d(desde_180d)} &&
+        'ConsumosyReparaciones'[fecha] >= {_d(desde_180d)} &&
         'ConsumosyReparaciones'[rubro] <> "ELECTRICOS" &&
         NOT ISBLANK('ConsumosyReparaciones'[maquina]) &&
         NOT ISBLANK('ConsumosyReparaciones'[repuesto])
@@ -165,7 +175,7 @@ SELECTCOLUMNS(
     "tipo_maquina", 'ConsumosyReparaciones'[tipo_maquina],
     "rubro", 'ConsumosyReparaciones'[rubro],
     "repuesto", 'ConsumosyReparaciones'[repuesto],
-    "fechfaccargas", 'ConsumosyReparaciones'[fechfaccargas]
+    "fecha_mov", 'ConsumosyReparaciones'[fecha]
 )
 """
  
@@ -274,15 +284,15 @@ def construir_todo():
  
     # --- Fluidos (ConsumosyReparaciones, rubro LUBRICANTE, año actual) ---
     df_fluidos_raw = pbi(dax_fluidos(f["desde_anio"]))
-    df_fluidos_raw["fechfaccargas"] = parsear_fecha_pbi_service(df_fluidos_raw["fechfaccargas"])
-    df_fluidos_raw = df_fluidos_raw.dropna(subset=["fechfaccargas"])
+    df_fluidos_raw["fecha_mov"] = parsear_fecha_pbi_service(df_fluidos_raw["fecha_mov"])
+    df_fluidos_raw = df_fluidos_raw.dropna(subset=["fecha_mov"])
     df_fluidos_raw["tipofluido"] = df_fluidos_raw["repuesto"].apply(clasificar_fluido)
     fluidos = construir_fluidos(df_fluidos_raw[df_fluidos_raw["tipofluido"].notna()], anio=f["hoy"].year)
  
     # --- compMirar (ConsumosyReparaciones, todos los rubros salvo eléctricos) ---
     df_todos_raw = pbi(dax_repuestos_todos(f["desde_180d"]))
-    df_todos_raw["fechfaccargas"] = parsear_fecha_pbi_service(df_todos_raw["fechfaccargas"])
-    df_todos_raw = df_todos_raw.dropna(subset=["fechfaccargas"])
+    df_todos_raw["fecha_mov"] = parsear_fecha_pbi_service(df_todos_raw["fecha_mov"])
+    df_todos_raw = df_todos_raw.dropna(subset=["fecha_mov"])
  
     df_precios = pbi(DAX_PRECIOS_REPUESTOS).dropna(subset=["repuesto"])
     df_precios["precio_prom"] = pd.to_numeric(df_precios["precio_prom"], errors="coerce")

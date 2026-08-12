@@ -329,8 +329,10 @@ UMBRAL_MONTO_COMPMIRAR = 30000
 def construir_comp_mirar(df_consumos, precios_repuesto=None, ventana_dias=180,
                           umbral_monto=UMBRAL_MONTO_COMPMIRAR):
     """df_consumos: filas de ConsumosyReparaciones (todos los rubros, no solo fluidos),
-    con columnas maquina, tipo_maquina, rubro, repuesto, fechfaccargas (fecha real de la
-    carga). precios_repuesto: Series/dict {repuesto: precio_unitario}, de
+    con columnas maquina, tipo_maquina, rubro, repuesto, fecha_mov (fecha del movimiento
+    = cuando se entrego el repuesto para esa maquina, movim.fecha en La Falda; NO la
+    fecha de factura de compra, ver el comentario en dax_fluidos de motor_produccion.py).
+    precios_repuesto: Series/dict {repuesto: precio_unitario}, de
     Compras[precio_Unitario] promediado por repuesto -- si no se pasa, no se filtra por
     monto (deja pasar todo, para no romper si todavía no se tiene el extracto de precios).
  
@@ -340,9 +342,9 @@ def construir_comp_mirar(df_consumos, precios_repuesto=None, ventana_dias=180,
     ahora además filtrado a repuestos cuyo precio unitario supera `umbral_monto` (pedido
     explícito: un insumo barato que se repite no amerita discutirlo en la reunión).
     Devuelve una lista de secciones por tipo de maquinaria (mismo criterio de fluidos)."""
-    hoy = df_consumos["fechfaccargas"].max()
+    hoy = df_consumos["fecha_mov"].max()
     desde = hoy - datetime.timedelta(days=ventana_dias)
-    df = df_consumos[df_consumos["fechfaccargas"] >= desde].copy()
+    df = df_consumos[df_consumos["fecha_mov"] >= desde].copy()
  
     if "rubro" in df.columns:
         df = df[~df["rubro"].astype(str).str.upper().isin(RUBROS_EXCLUIDOS_COMPMIRAR)]
@@ -365,7 +367,7 @@ def construir_comp_mirar(df_consumos, precios_repuesto=None, ventana_dias=180,
             # mismo motivo que en construir_fluidos: deduplicar por fecha, no por
             # línea de factura (una compra partida en varias líneas el mismo día no
             # es un recambio repetido real).
-            fechas = sorted(set(gr["fechfaccargas"].tolist()))
+            fechas = sorted(set(gr["fecha_mov"].tolist()))
             if len(fechas) < 2:
                 continue
             pares = _pares_consecutivos(fechas)
@@ -423,7 +425,7 @@ def construir_fluidos(df_consumos_fluidos, anio=2026):
     'tipofluido' y 'tipo_maquina'. Devuelve una lista de SECCIONES por tipo de
     maquinaria (pedido del usuario), cada una con sus alertas, ordenadas por
     cantidad de alertas."""
-    df = df_consumos_fluidos[df_consumos_fluidos["fechfaccargas"].dt.year == anio].copy()
+    df = df_consumos_fluidos[df_consumos_fluidos["fecha_mov"].dt.year == anio].copy()
     if "tipo_maquina" in df.columns:
         df = df[~df.apply(lambda r: _excluido_por_tipo(r.get("tipo_maquina"), r.get("maquina")), axis=1)]
  
@@ -435,7 +437,7 @@ def construir_fluidos(df_consumos_fluidos, anio=2026):
         # artificialmente "veces" (se vio un caso de 21 líneas que en realidad eran
         # solo 3 fechas distintas de carga) y hace ver mingap=0 donde no hay ningún
         # recambio repetido real. Se cuenta por fecha, no por línea.
-        fechas = sorted(set(g["fechfaccargas"].tolist()))
+        fechas = sorted(set(g["fecha_mov"].tolist()))
         veces = len(fechas)
         umbral = UMBRAL_FLUIDO_ANUAL.get(tipofluido, 999)
         if veces < umbral:
@@ -609,8 +611,8 @@ if __name__ == "__main__":
     # ConsumosyReparaciones: fluidos y compMirar (extracto de prueba, rubro LUBRICANTE
     # de los últimos ~6 meses; en producción compMirar usaría el resto de rubros también)
     df_cons = pd.read_csv(BASE / "raw_fluidos.csv")
-    df_cons["fechfaccargas"] = pd.to_datetime(df_cons["fechfaccargas"], format="%d/%m/%Y %H:%M:%S", errors="coerce")
-    df_cons = df_cons.dropna(subset=["fechfaccargas"])
+    df_cons["fecha_mov"] = pd.to_datetime(df_cons["fecha"], format="%d/%m/%Y %H:%M:%S", errors="coerce")
+    df_cons = df_cons.dropna(subset=["fecha_mov"])
     df_cons["tipofluido"] = df_cons["repuesto"].apply(clasificar_fluido)
     fluidos = construir_fluidos(df_cons[df_cons["tipofluido"].notna()])
     comp_mirar = construir_comp_mirar(df_cons)
