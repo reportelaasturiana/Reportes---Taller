@@ -1,0 +1,59 @@
+name: DIAGNOSTICO temporal - columnas del modelo
+
+# Workflow desechable: lista las columnas de ConsumosyReparaciones para saber si
+# el modelo trae la fecha real del movimiento (movim.fecha en La Falda) ademas de
+# la fecha de factura (fechfaccargas). Se borra apenas se lea el resultado.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  inspeccionar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Listar columnas del modelo
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          POWERBI_WORKSPACE_ID: ${{ secrets.POWERBI_WORKSPACE_ID }}
+          POWERBI_DATASET_ID: ${{ secrets.POWERBI_DATASET_ID }}
+        run: |
+          python - <<'PY'
+          import os, sys
+          sys.path.insert(0, "scripts")
+          from motor_agregacion import (
+              obtener_access_token_service_principal, cargar_desde_power_bi_service)
+
+          tok = obtener_access_token_service_principal(
+              os.environ["AZURE_TENANT_ID"], os.environ["AZURE_CLIENT_ID"],
+              os.environ["AZURE_CLIENT_SECRET"])
+          ws, ds = os.environ["POWERBI_WORKSPACE_ID"], os.environ["POWERBI_DATASET_ID"]
+
+          def correr(titulo, dax):
+              print("=" * 70)
+              print(titulo)
+              print("=" * 70)
+              try:
+                  df = cargar_desde_power_bi_service(ws, ds, dax, tok)
+                  print(f"filas={len(df)}  columnas={len(df.columns)}")
+                  for c in df.columns:
+                      muestra = df[c].iloc[0] if len(df) else ""
+                      print(f"   {c:<40} | {str(muestra)[:45]}")
+              except Exception as e:
+                  print(f"   ERROR: {type(e).__name__}: {str(e)[:300]}")
+              print()
+
+          correr("TABLAS DEL MODELO",
+                 'EVALUATE SELECTCOLUMNS(INFO.TABLES(), "tabla", [Name])')
+          correr("COLUMNAS DE ConsumosyReparaciones (muestra de 3 filas)",
+                 "EVALUATE TOPN(3, 'ConsumosyReparaciones')")
+          PY
