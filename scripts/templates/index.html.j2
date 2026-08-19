@@ -4,100 +4,101 @@
 <title>Reportes del Taller · La Asturiana</title>
 <link rel="icon" href="logo.png">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800;900&display=swap');
-:root{
-  --r:#c0392b;--v:#4a7c2f;--b:#1565c0;--mg:#e65100;
-  --t:#1a1a1a;--s:#555;--s2:#999;--bd:#e2e2e2;--bg:#f2f2f2;--w:#fff;
-  --sh:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.06);
-  --shh:0 2px 8px rgba(0,0,0,.09),0 12px 32px rgba(0,0,0,.10);
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--t);
-  font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
-.wrap{max-width:760px;margin:0 auto;padding:40px 20px 56px}
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Montserrat',sans-serif;background:#0d0d0d}
 
-/* ---- cabecera: mismo lockup que los 2 reportes ---- */
-header{display:flex;align-items:center;gap:14px;margin-bottom:34px}
-header img{width:40px;height:52px;object-fit:contain;flex:none}
-.enm{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:19px;letter-spacing:-.02em;line-height:1.1}
-.esb{font-size:12px;color:var(--s);font-weight:500}
+.portal{position:relative;width:100%;min-height:100vh;min-height:100dvh;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
 
-h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:clamp(30px,6vw,42px);
-  letter-spacing:-.03em;line-height:1.05;margin:0 0 10px}
-.sub{color:var(--s);font-size:15px;margin:0 0 30px;line-height:1.5}
-.sub strong{color:var(--t);font-weight:600}
+/* fondo partido: rojo y verde, los 2 colores del logo */
+.bg-split{position:absolute;inset:0;display:flex}
+.bg-left,.bg-right{flex:1;position:relative;overflow:hidden}
+.bg-left{background:linear-gradient(150deg,#6b0f08 0%,#b02a1e 50%,#8a1810 100%)}
+.bg-right{background:linear-gradient(210deg,#16300b 0%,#3d6b22 50%,#244713 100%)}
+.bg-left::before,.bg-right::before{content:'';position:absolute;inset:0}
+.bg-left::before{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.025) 0,rgba(255,255,255,.025) 1px,transparent 1px,transparent 48px)}
+.bg-right::before{background-image:repeating-linear-gradient(-45deg,rgba(255,255,255,.03) 0,rgba(255,255,255,.03) 1px,transparent 1px,transparent 48px)}
+.bg-left::after{content:'';position:absolute;width:520px;height:520px;border-radius:50%;
+  border:70px solid rgba(255,255,255,.04);bottom:-160px;left:-120px}
+.bg-right::after{content:'';position:absolute;width:420px;height:420px;border-radius:50%;
+  border:55px solid rgba(255,255,255,.05);top:-110px;right:-90px}
+.divider{position:absolute;top:0;left:50%;width:5px;height:100%;z-index:2;
+  background:linear-gradient(to bottom,rgba(255,255,255,.6),rgba(255,255,255,.2),rgba(255,255,255,.6));
+  transform:translateX(-50%) skewX(-2deg);box-shadow:0 0 24px rgba(255,255,255,.2)}
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.46);z-index:1}
 
-/* ---- tarjetas ---- */
-.cards{display:grid;gap:16px}
-.card{display:block;position:relative;background:var(--w);border:1px solid var(--bd);
-  border-radius:14px;padding:22px 24px 22px 28px;text-decoration:none;color:inherit;
-  box-shadow:var(--sh);overflow:hidden;transition:transform .16s ease,box-shadow .16s ease}
-.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--ac)}
-.card:hover{transform:translateY(-2px);box-shadow:var(--shh)}
-.card:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
-.ct{display:flex;align-items:center;gap:9px;margin-bottom:7px}
-.ico{font-size:19px;line-height:1}
-.cn{font-family:'Inter Tight',sans-serif;font-weight:800;font-size:19px;letter-spacing:-.02em}
-.cd{color:var(--s);font-size:14px;line-height:1.55;margin:0}
-.tags{margin-top:13px;display:flex;flex-wrap:wrap;gap:6px}
-.tag{font-size:11.5px;font-weight:600;color:var(--ac);background:var(--acb);
-  border-radius:20px;padding:3px 10px;white-space:nowrap}
-.go{position:absolute;right:22px;top:24px;color:var(--s2);font-size:20px;
-  transition:transform .16s ease,color .16s ease}
-.card:hover .go{transform:translateX(3px);color:var(--ac)}
+.content{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;
+  padding:48px 20px;width:100%;max-width:900px;text-align:center}
 
-.taller{--ac:var(--v);--acb:#eaf3de}
-.maq{--ac:var(--b);--acb:#e3f2fd}
+.logo-box{background:rgba(255,255,255,.10);backdrop-filter:blur(8px);border-radius:16px;
+  padding:14px 20px;border:1px solid rgba(255,255,255,.20);margin-bottom:26px}
+.logo-box img{display:block;height:62px;object-fit:contain}
 
-footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--bd);
-  color:var(--s2);font-size:12.5px;line-height:1.7}
-@media(max-width:520px){
-  .wrap{padding:28px 16px 40px}
-  .card{padding:18px 18px 18px 22px}
-  .go{display:none}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;
+  color:rgba(255,255,255,.5);margin-bottom:10px}
+h1{font-size:clamp(24px,5vw,40px);font-weight:900;color:#fff;text-transform:uppercase;
+  letter-spacing:1px;line-height:1.15;text-shadow:0 2px 20px rgba(0,0,0,.6)}
+h1 .thin{font-weight:300;color:rgba(255,255,255,.5);margin:0 4px}
+.tag{margin-top:12px;font-size:12px;font-weight:400;letter-spacing:.4px;color:rgba(255,255,255,.5)}
+
+.buttons-row{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;margin-top:40px}
+.portal-btn{position:relative;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;width:300px;min-height:150px;border-radius:18px;cursor:pointer;
+  overflow:hidden;padding:26px 22px 30px;text-decoration:none;
+  transition:transform .25s cubic-bezier(.2,1,.3,1),box-shadow .25s}
+.portal-btn:hover{transform:translateY(-7px) scale(1.03)}
+.portal-btn:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.btn-taller{background:linear-gradient(145deg,#c0392b,#8a1810);
+  box-shadow:0 8px 32px rgba(192,57,43,.45),inset 0 1px 0 rgba(255,255,255,.18)}
+.btn-taller:hover{box-shadow:0 18px 50px rgba(192,57,43,.65),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn-maq{background:linear-gradient(145deg,#4a7c2f,#244713);
+  box-shadow:0 8px 32px rgba(74,124,47,.45),inset 0 1px 0 rgba(255,255,255,.18)}
+.btn-maq:hover{box-shadow:0 18px 50px rgba(74,124,47,.65),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn-ico{font-size:30px;line-height:1;margin-bottom:14px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))}
+.btn-name{font-size:15px;font-weight:800;color:#fff;text-transform:uppercase;
+  letter-spacing:1.4px;line-height:1.35}
+.btn-arrow{position:absolute;bottom:12px;right:18px;font-size:17px;color:rgba(255,255,255,.3);
+  transition:transform .2s,color .2s}
+.portal-btn:hover .btn-arrow{transform:translateX(4px);color:rgba(255,255,255,.7)}
+
+.footer-note{margin-top:38px;font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  color:rgba(255,255,255,.28);line-height:1.9}
+
+@media(max-width:680px){
+  .divider{display:none}
+  .bg-split{flex-direction:column}
+  .content{padding:36px 18px}
+  .portal-btn{width:100%;max-width:330px;min-height:120px}
 }
 </style></head>
 <body>
-<div class="wrap">
+<div class="portal">
+  <div class="bg-split"><div class="bg-left"></div><div class="bg-right"></div></div>
+  <div class="divider"></div>
+  <div class="overlay"></div>
 
-<header>
-  <img src="logo.png" alt="La Asturiana">
-  <div>
-    <div class="enm">La Asturiana</div>
-    <div class="esb">Servicios Agrícolas</div>
+  <div class="content">
+    <div class="logo-box"><img src="logo.png" alt="La Asturiana"></div>
+
+    <div class="eyebrow">La Asturiana · Servicios Agrícolas</div>
+    <h1>Reportes <span class="thin">del</span> Taller</h1>
+    <div class="tag">Semana {{ sem.numero }} · {{ sem.rango_largo }}</div>
+
+    <div class="buttons-row">
+      <a class="portal-btn btn-taller" href="Gestion_Taller.html">
+        <span class="btn-ico">🔧</span>
+        <span class="btn-name">Gestión del Taller</span>
+        <span class="btn-arrow">→</span>
+      </a>
+      <a class="portal-btn btn-maq" href="Reunion_Semanal_Maquinaria.html">
+        <span class="btn-ico">🚜</span>
+        <span class="btn-name">Reunión Semanal<br>de Maquinaria</span>
+        <span class="btn-arrow">→</span>
+      </a>
+    </div>
+
+    <div class="footer-note">Actualizado: {{ generado_en }}</div>
   </div>
-</header>
-
-<h1>Reportes del Taller</h1>
-<p class="sub">Semana <strong>{{ sem.numero }}</strong> · {{ sem.rango_largo }}<br>
-Se generan solos todos los lunes con los datos del sistema.</p>
-
-<div class="cards">
-
-  <a class="card taller" href="Gestion_Taller.html">
-    <span class="go">→</span>
-    <div class="ct"><span class="ico">🔧</span><span class="cn">Gestión del Taller</span></div>
-    <p class="cd">En qué se fueron las horas de los mecánicos: reparto entre taller y campo,
-    rubros que más consumen, quién faltó y quién es nuevo, y el cruce con Chinagro.</p>
-    <div class="tags"><span class="tag">Horas por mecánico</span><span class="tag">Rubros</span>
-    <span class="tag">Ausentes y nuevos</span><span class="tag">Quincenas</span></div>
-  </a>
-
-  <a class="card maq" href="Reunion_Semanal_Maquinaria.html">
-    <span class="go">→</span>
-    <div class="ct"><span class="ico">🚜</span><span class="cn">Reunión Semanal de Maquinaria</span></div>
-    <p class="cd">Lo que hay que discutir en la reunión: máquinas que más taller pidieron,
-    repuestos que se repiten antes de tiempo, posibles pérdidas de fluido y supervisores asistidos.</p>
-    <div class="tags"><span class="tag">Máquinas top</span><span class="tag">Recambios repetidos</span>
-    <span class="tag">Pérdidas de fluido</span><span class="tag">Supervisores</span></div>
-  </a>
-
-</div>
-
-<footer>
-  🕒 Actualizado: {{ generado_en }}<br>
-  La Asturiana SRL · Los datos salen de La Falda y Power BI.
-</footer>
-
 </div>
 </body></html>
