@@ -58,8 +58,11 @@ h1 .rojo{color:var(--rojo)}
   margin-left:auto;line-height:1.5}
 
 /* --- CENTRO: las 2 tarjetas, compactas y en una linea --- */
+/* el padding-bottom extra corre las tarjetas hacia arriba dentro del hueco
+   libre, sin pegarlas a la cabecera; al ser vh, el sesgo acompaña el alto de
+   la pantalla en vez de ser un valor fijo que solo sirve en un monitor */
 .centro{position:relative;z-index:5;flex:1;display:flex;align-items:center;justify-content:center;
-  padding:40px 0}
+  padding:24px 0 clamp(70px,18vh,190px)}
 .fila{display:flex;gap:16px;width:100%;max-width:820px;flex-wrap:wrap}
 .tarjeta{position:relative;flex:1 1 300px;display:flex;align-items:center;gap:14px;
   background:var(--blanco);border:1px solid var(--linea);border-radius:14px;
@@ -94,7 +97,7 @@ h1 .rojo{color:var(--rojo)}
   .semana{text-align:left;padding-top:22px}
   .sem-r{margin-left:0;max-width:none}
   .arco-2{display:none}
-  .centro{padding:34px 0}
+  .centro{padding:34px 0 40px}
   .tarjeta{flex:1 1 100%}
   .t-nombre{white-space:normal;font-size:12px}
 }
