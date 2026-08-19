@@ -14,108 +14,121 @@
 body{font-family:'Montserrat',sans-serif;background:var(--papel);color:var(--tinta);
   -webkit-font-smoothing:antialiased}
 
-.escena{position:relative;min-height:100vh;min-height:100dvh;display:flex;
-  align-items:center;justify-content:center;overflow:hidden;padding:56px 24px}
+.pagina{position:relative;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;
+  overflow:hidden;padding:40px clamp(22px,5vw,64px) 30px}
 
-/* --- textura: rayas y arcos, el lado rojo pasado a claro --- */
+/* --- textura --- */
 .rayas{position:absolute;inset:0;pointer-events:none;
   background-image:repeating-linear-gradient(45deg,
     rgba(192,57,43,.045) 0,rgba(192,57,43,.045) 1px,transparent 1px,transparent 46px)}
 .arco{position:absolute;border-radius:50%;pointer-events:none}
-.arco-1{width:760px;height:760px;border:96px solid rgba(192,57,43,.055);
-  top:-330px;right:-260px}
-.arco-2{width:520px;height:520px;border:64px solid rgba(192,57,43,.04);
-  bottom:-250px;left:-190px}
+.arco-1{width:720px;height:720px;border:92px solid rgba(192,57,43,.05);top:-350px;right:-290px}
+.arco-2{width:520px;height:520px;border:64px solid rgba(192,57,43,.04);bottom:-260px;left:-200px}
 .rubor{position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(760px 520px at 88% -8%,rgba(192,57,43,.13),transparent 62%),
-             radial-gradient(620px 480px at 4% 104%,rgba(192,57,43,.08),transparent 60%)}
+  background:radial-gradient(760px 520px at 90% -10%,rgba(192,57,43,.12),transparent 62%),
+             radial-gradient(620px 480px at 2% 106%,rgba(192,57,43,.08),transparent 60%)}
 
-.centro{position:relative;z-index:5;width:100%;max-width:900px;text-align:center}
+/* --- CABECERA: titulo izquierda, semana derecha --- */
+.cabecera{position:relative;z-index:5;display:flex;align-items:flex-start;
+  justify-content:space-between;gap:28px;flex-wrap:wrap}
 
-/* --- marca --- */
-.marca{display:inline-flex;align-items:center;gap:13px;background:var(--blanco);
-  border:1px solid var(--linea);border-radius:100px;padding:9px 22px 9px 13px;
-  box-shadow:0 2px 10px rgba(107,15,8,.05);margin-bottom:34px}
-.marca img{height:38px;width:auto;object-fit:contain;display:block}
-.marca-txt{text-align:left;line-height:1.25}
-.marca-n{font-size:14px;font-weight:800;letter-spacing:-.01em}
-.marca-s{font-size:10px;font-weight:500;color:var(--gris);letter-spacing:.06em;text-transform:uppercase}
+.marca{display:inline-flex;align-items:center;gap:12px;background:var(--blanco);
+  border:1px solid var(--linea);border-radius:100px;padding:8px 20px 8px 11px;
+  box-shadow:0 2px 10px rgba(107,15,8,.05);margin-bottom:26px}
+.marca img{height:34px;width:auto;object-fit:contain;display:block}
+.marca-txt{line-height:1.25}
+.marca-n{font-size:13px;font-weight:800;letter-spacing:-.01em}
+.marca-s{font-size:9.5px;font-weight:500;color:var(--gris);letter-spacing:.06em;text-transform:uppercase}
 
-/* --- titulo --- */
-.cintillo{font-size:10.5px;font-weight:700;letter-spacing:.34em;text-transform:uppercase;
-  color:var(--rojo);margin-bottom:14px}
-h1{font-size:clamp(34px,7.5vw,62px);font-weight:900;text-transform:uppercase;
-  letter-spacing:-.01em;line-height:.98}
-h1 .liviano{display:block;font-size:.42em;font-weight:600;letter-spacing:.16em;
-  color:var(--gris);margin-bottom:9px}
+.cintillo{font-size:10px;font-weight:700;letter-spacing:.34em;text-transform:uppercase;
+  color:var(--rojo);margin-bottom:11px}
+h1{font-size:clamp(30px,5.6vw,52px);font-weight:900;text-transform:uppercase;
+  letter-spacing:-.01em;line-height:.96}
+h1 .liviano{display:block;font-size:.40em;font-weight:600;letter-spacing:.16em;
+  color:var(--gris);margin-bottom:7px}
 h1 .rojo{color:var(--rojo)}
-.regla{width:54px;height:4px;background:var(--rojo);border-radius:2px;margin:26px auto 0}
-.semana{margin-top:20px;font-size:12.5px;font-weight:500;color:var(--gris);letter-spacing:.02em}
+.regla{width:50px;height:4px;background:var(--rojo);border-radius:2px;margin-top:20px}
 
-/* --- tarjetas --- */
-.fila{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-top:46px}
-.tarjeta{position:relative;flex:1 1 300px;max-width:340px;min-height:172px;
-  display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;
-  background:var(--blanco);border:1px solid var(--linea);border-radius:20px;
-  padding:26px 26px 24px;text-decoration:none;color:var(--tinta);overflow:hidden;
-  box-shadow:0 1px 3px rgba(107,15,8,.05),0 10px 30px rgba(107,15,8,.05);
+.semana{text-align:right;flex:none;padding-top:6px}
+.sem-et{font-size:9.5px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--gris-cl);margin-bottom:7px}
+.sem-n{font-family:'Montserrat',sans-serif;font-size:clamp(22px,3.4vw,32px);font-weight:900;
+  color:var(--rojo);line-height:1;letter-spacing:-.01em}
+.sem-r{margin-top:8px;font-size:11.5px;font-weight:500;color:var(--gris);max-width:230px;
+  margin-left:auto;line-height:1.5}
+
+/* --- CENTRO: las 2 tarjetas, compactas y en una linea --- */
+.centro{position:relative;z-index:5;flex:1;display:flex;align-items:center;justify-content:center;
+  padding:40px 0}
+.fila{display:flex;gap:16px;width:100%;max-width:820px;flex-wrap:wrap}
+.tarjeta{position:relative;flex:1 1 300px;display:flex;align-items:center;gap:14px;
+  background:var(--blanco);border:1px solid var(--linea);border-radius:14px;
+  padding:17px 20px;text-decoration:none;color:var(--tinta);overflow:hidden;
+  box-shadow:0 1px 3px rgba(107,15,8,.05),0 8px 24px rgba(107,15,8,.05);
   transition:transform .3s cubic-bezier(.2,1,.3,1),box-shadow .3s,border-color .3s}
-/* el degradado rojo espera debajo y sube al pasar el mouse */
 .tarjeta::before{content:'';position:absolute;inset:0;opacity:0;
   background:linear-gradient(150deg,var(--rojo) 0%,var(--rojo-osc) 62%,var(--rojo-prof) 100%);
   transition:opacity .3s}
-.tarjeta::after{content:'';position:absolute;top:0;left:0;right:0;height:4px;
-  background:var(--rojo);transform:scaleX(0);transform-origin:left;transition:transform .35s cubic-bezier(.2,1,.3,1)}
 .tarjeta>*{position:relative;z-index:2}
-.tarjeta:hover,.tarjeta:focus-visible{transform:translateY(-6px);border-color:transparent;
-  box-shadow:0 18px 44px rgba(192,57,43,.28)}
+.tarjeta:hover,.tarjeta:focus-visible{transform:translateY(-4px);border-color:transparent;
+  box-shadow:0 14px 34px rgba(192,57,43,.26)}
 .tarjeta:hover::before,.tarjeta:focus-visible::before{opacity:1}
-.tarjeta:hover::after,.tarjeta:focus-visible::after{transform:scaleX(1);background:rgba(255,255,255,.5)}
 .tarjeta:focus-visible{outline:3px solid var(--rojo);outline-offset:3px}
+.t-ico{font-size:20px;line-height:1;flex:none;transition:transform .3s}
+.tarjeta:hover .t-ico{transform:scale(1.1) rotate(-5deg)}
+.t-nombre{flex:1;font-size:12.5px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.07em;white-space:nowrap;transition:color .3s}
+.t-flecha{flex:none;font-size:17px;color:var(--gris-cl);transition:transform .3s,color .3s}
+.tarjeta:hover .t-nombre,.tarjeta:focus-visible .t-nombre,
+.tarjeta:hover .t-flecha,.tarjeta:focus-visible .t-flecha{color:#fff}
+.tarjeta:hover .t-flecha{transform:translateX(4px)}
 
-.t-ico{font-size:27px;line-height:1;margin-bottom:auto;transition:transform .3s}
-.tarjeta:hover .t-ico{transform:scale(1.08) rotate(-4deg)}
-.t-nombre{font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
-  line-height:1.4;text-align:left;margin-top:20px;transition:color .3s}
-.t-flecha{position:absolute;right:24px;bottom:24px;font-size:19px;color:var(--gris-cl);
-  transition:transform .3s,color .3s}
-.tarjeta:hover .t-nombre,.tarjeta:focus-visible .t-nombre{color:#fff}
-.tarjeta:hover .t-flecha,.tarjeta:focus-visible .t-flecha{transform:translateX(5px);color:#fff}
+/* --- PIE --- */
+.pie{position:relative;z-index:5;font-size:9.5px;font-weight:600;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--gris-cl);border-top:1px solid var(--linea);
+  padding-top:16px}
 
-.pie{margin-top:44px;font-size:10px;font-weight:600;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--gris-cl);line-height:2}
-
-@media(max-width:620px){
-  .escena{padding:40px 18px}
-  .arco-1{width:460px;height:460px;border-width:62px;top:-200px;right:-160px}
+@media(max-width:760px){
+  .pagina{padding:30px 20px 24px}
+  .cabecera{flex-direction:column;gap:0}
+  .semana{text-align:left;padding-top:22px}
+  .sem-r{margin-left:0;max-width:none}
   .arco-2{display:none}
-  .tarjeta{flex:1 1 100%;max-width:none;min-height:132px}
-  .fila{margin-top:36px}
+  .centro{padding:34px 0}
+  .tarjeta{flex:1 1 100%}
+  .t-nombre{white-space:normal;font-size:12px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head>
 <body>
-<div class="escena">
+<div class="pagina">
   <div class="rubor"></div>
   <div class="rayas"></div>
   <div class="arco arco-1"></div>
   <div class="arco arco-2"></div>
 
-  <div class="centro">
-
-    <div class="marca">
-      <img src="logo.png" alt="">
-      <div class="marca-txt">
-        <div class="marca-n">La Asturiana</div>
-        <div class="marca-s">Servicios Agrícolas</div>
+  <header class="cabecera">
+    <div>
+      <div class="marca">
+        <img src="logo.png" alt="">
+        <div class="marca-txt">
+          <div class="marca-n">La Asturiana</div>
+          <div class="marca-s">Servicios Agrícolas</div>
+        </div>
       </div>
+      <div class="cintillo">Informe semanal</div>
+      <h1><span class="liviano">Reportes del</span><span class="rojo">Taller</span></h1>
+      <div class="regla"></div>
     </div>
 
-    <div class="cintillo">Informe semanal</div>
-    <h1><span class="liviano">Reportes del</span><span class="rojo">Taller</span></h1>
-    <div class="regla"></div>
-    <div class="semana">Semana {{ sem.numero }} · {{ sem.rango_largo }}</div>
+    <div class="semana">
+      <div class="sem-et">Semana</div>
+      <div class="sem-n">{{ sem.numero }}</div>
+      <div class="sem-r">{{ sem.rango_largo }}</div>
+    </div>
+  </header>
 
+  <main class="centro">
     <div class="fila">
       <a class="tarjeta" href="Gestion_Taller.html">
         <span class="t-ico">🔧</span>
@@ -124,13 +137,12 @@ h1 .rojo{color:var(--rojo)}
       </a>
       <a class="tarjeta" href="Reunion_Semanal_Maquinaria.html">
         <span class="t-ico">🚜</span>
-        <span class="t-nombre">Reunión Semanal<br>de Maquinaria</span>
+        <span class="t-nombre">Reunión Semanal de Maquinaria</span>
         <span class="t-flecha">→</span>
       </a>
     </div>
+  </main>
 
-    <div class="pie">Actualizado: {{ generado_en }}</div>
-
-  </div>
+  <footer class="pie">Actualizado: {{ generado_en }}</footer>
 </div>
 </body></html>
