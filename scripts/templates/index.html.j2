@@ -1,0 +1,103 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reportes del Taller · La Asturiana</title>
+<link rel="icon" href="logo.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800;900&display=swap');
+:root{
+  --r:#c0392b;--v:#4a7c2f;--b:#1565c0;--mg:#e65100;
+  --t:#1a1a1a;--s:#555;--s2:#999;--bd:#e2e2e2;--bg:#f2f2f2;--w:#fff;
+  --sh:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.06);
+  --shh:0 2px 8px rgba(0,0,0,.09),0 12px 32px rgba(0,0,0,.10);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t);
+  font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:40px 20px 56px}
+
+/* ---- cabecera: mismo lockup que los 2 reportes ---- */
+header{display:flex;align-items:center;gap:14px;margin-bottom:34px}
+header img{width:40px;height:52px;object-fit:contain;flex:none}
+.enm{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:19px;letter-spacing:-.02em;line-height:1.1}
+.esb{font-size:12px;color:var(--s);font-weight:500}
+
+h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:clamp(30px,6vw,42px);
+  letter-spacing:-.03em;line-height:1.05;margin:0 0 10px}
+.sub{color:var(--s);font-size:15px;margin:0 0 30px;line-height:1.5}
+.sub strong{color:var(--t);font-weight:600}
+
+/* ---- tarjetas ---- */
+.cards{display:grid;gap:16px}
+.card{display:block;position:relative;background:var(--w);border:1px solid var(--bd);
+  border-radius:14px;padding:22px 24px 22px 28px;text-decoration:none;color:inherit;
+  box-shadow:var(--sh);overflow:hidden;transition:transform .16s ease,box-shadow .16s ease}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--ac)}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shh)}
+.card:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.ct{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.ico{font-size:19px;line-height:1}
+.cn{font-family:'Inter Tight',sans-serif;font-weight:800;font-size:19px;letter-spacing:-.02em}
+.cd{color:var(--s);font-size:14px;line-height:1.55;margin:0}
+.tags{margin-top:13px;display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:11.5px;font-weight:600;color:var(--ac);background:var(--acb);
+  border-radius:20px;padding:3px 10px;white-space:nowrap}
+.go{position:absolute;right:22px;top:24px;color:var(--s2);font-size:20px;
+  transition:transform .16s ease,color .16s ease}
+.card:hover .go{transform:translateX(3px);color:var(--ac)}
+
+.taller{--ac:var(--v);--acb:#eaf3de}
+.maq{--ac:var(--b);--acb:#e3f2fd}
+
+footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--bd);
+  color:var(--s2);font-size:12.5px;line-height:1.7}
+@media(max-width:520px){
+  .wrap{padding:28px 16px 40px}
+  .card{padding:18px 18px 18px 22px}
+  .go{display:none}
+}
+</style></head>
+<body>
+<div class="wrap">
+
+<header>
+  <img src="logo.png" alt="La Asturiana">
+  <div>
+    <div class="enm">La Asturiana</div>
+    <div class="esb">Servicios Agrícolas</div>
+  </div>
+</header>
+
+<h1>Reportes del Taller</h1>
+<p class="sub">Semana <strong>{{ sem.numero }}</strong> · {{ sem.rango_largo }}<br>
+Se generan solos todos los lunes con los datos del sistema.</p>
+
+<div class="cards">
+
+  <a class="card taller" href="Gestion_Taller.html">
+    <span class="go">→</span>
+    <div class="ct"><span class="ico">🔧</span><span class="cn">Gestión del Taller</span></div>
+    <p class="cd">En qué se fueron las horas de los mecánicos: reparto entre taller y campo,
+    rubros que más consumen, quién faltó y quién es nuevo, y el cruce con Chinagro.</p>
+    <div class="tags"><span class="tag">Horas por mecánico</span><span class="tag">Rubros</span>
+    <span class="tag">Ausentes y nuevos</span><span class="tag">Quincenas</span></div>
+  </a>
+
+  <a class="card maq" href="Reunion_Semanal_Maquinaria.html">
+    <span class="go">→</span>
+    <div class="ct"><span class="ico">🚜</span><span class="cn">Reunión Semanal de Maquinaria</span></div>
+    <p class="cd">Lo que hay que discutir en la reunión: máquinas que más taller pidieron,
+    repuestos que se repiten antes de tiempo, posibles pérdidas de fluido y supervisores asistidos.</p>
+    <div class="tags"><span class="tag">Máquinas top</span><span class="tag">Recambios repetidos</span>
+    <span class="tag">Pérdidas de fluido</span><span class="tag">Supervisores</span></div>
+  </a>
+
+</div>
+
+<footer>
+  🕒 Actualizado: {{ generado_en }}<br>
+  La Asturiana SRL · Los datos salen de La Falda y Power BI.
+</footer>
+
+</div>
+</body></html>

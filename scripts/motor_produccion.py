@@ -402,15 +402,9 @@ if __name__ == "__main__":
     copiar_estaticos()
     render("gestion_taller.html.j2", ctx_taller, "Gestion_Taller.html")
     render("reunion_maquinaria.html.j2", ctx_maquinaria, "Reunion_Semanal_Maquinaria.html")
-    # Página de entrada simple con los 2 links, para que GitHub Pages tenga un index.
-    index_html = """<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
-<title>Reportes Taller - La Asturiana</title>
-<style>body{font-family:sans-serif;max-width:600px;margin:60px auto;padding:0 20px}
-a{display:block;padding:16px;margin:12px 0;background:#f5f5f5;border-radius:8px;
-text-decoration:none;color:#222;font-weight:600}a:hover{background:#eee}</style></head>
-<body><h1>Reportes del Taller - La Asturiana</h1>
-<a href="Gestion_Taller.html">Gestion del Taller</a>
-<a href="Reunion_Semanal_Maquinaria.html">Reunion Semanal de Maquinaria</a>
-</body></html>"""
-    (OUTPUT_DIR / "index.html").write_text(index_html, encoding="utf-8")
-    print("Generado: index.html")
+    # Portada con los 2 links. Usa la misma plantilla/paleta que los reportes
+    # (Inter + Inter Tight, variables CSS, el lockup del logo) para que no
+    # parezca otra cosa. Antes era un HTML de 9 lineas escrito a mano aca.
+    render("index.html.j2",
+           {"sem": ctx_taller["sem"], "generado_en": ctx_taller["generado_en"]},
+           "index.html")
