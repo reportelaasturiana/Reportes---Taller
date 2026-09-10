@@ -41,15 +41,16 @@ jobs:
                   print(f"ERROR: {type(e).__name__}: {str(e)[:400]}")
               print()
 
-          correr("ESTADOS por mes en 2026 (toda la tabla)", """
+          correr("ESTADOS en toda la tabla, con su rango de fechas", """
           EVALUATE
           SELECTCOLUMNS(
             SUMMARIZECOLUMNS(
               'Horas_Personal_AppSheet'[Estado],
-              "mes", YEAR('Horas_Personal_AppSheet'[Fecha])*100+MONTH('Horas_Personal_AppSheet'[Fecha]),
               "filas", COUNTROWS('Horas_Personal_AppSheet'),
-              "horas", SUM('Horas_Personal_AppSheet'[Horas])),
-            "Estado", 'Horas_Personal_AppSheet'[Estado], "mes", [mes],
-            "filas", [filas], "horas", [horas])
+              "horas", SUM('Horas_Personal_AppSheet'[Horas]),
+              "desde", MIN('Horas_Personal_AppSheet'[Fecha]),
+              "hasta", MAX('Horas_Personal_AppSheet'[Fecha])),
+            "Estado", 'Horas_Personal_AppSheet'[Estado], "filas", [filas],
+            "horas", [horas], "desde", [desde], "hasta", [hasta])
           """)
           PY
