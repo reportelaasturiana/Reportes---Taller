@@ -41,27 +41,15 @@ jobs:
                   print(f"ERROR: {type(e).__name__}: {str(e)[:400]}")
               print()
 
-          correr("ESTADOS en Horas_Personal_AppSheet (semana del informe)", f"""
+          correr("ESTADOS por mes en 2026 (toda la tabla)", """
           EVALUATE
           SELECTCOLUMNS(
-            SUMMARIZECOLUMNS('Horas_Personal_AppSheet'[Estado],
-              FILTER('Horas_Personal_AppSheet',
-                'Horas_Personal_AppSheet'[Fecha] >= {_d(f['lunes_actual'])} &&
-                'Horas_Personal_AppSheet'[Fecha] <= {_d(f['domingo_actual'])}),
+            SUMMARIZECOLUMNS(
+              'Horas_Personal_AppSheet'[Estado],
+              "mes", YEAR('Horas_Personal_AppSheet'[Fecha])*100+MONTH('Horas_Personal_AppSheet'[Fecha]),
               "filas", COUNTROWS('Horas_Personal_AppSheet'),
               "horas", SUM('Horas_Personal_AppSheet'[Horas])),
-            "Estado", 'Horas_Personal_AppSheet'[Estado], "filas", [filas], "horas", [horas])
-          """)
-
-          correr("Liquidacion_MO por fecha_tarea (semana del informe)", f"""
-          EVALUATE
-          SELECTCOLUMNS(
-            SUMMARIZECOLUMNS('Liquidacion_MO'[fecha_tarea],
-              FILTER('Liquidacion_MO',
-                'Liquidacion_MO'[fecha_tarea] >= {_d(f['lunes_actual'])} &&
-                'Liquidacion_MO'[fecha_tarea] <= {_d(f['domingo_actual'])}),
-              "hs", SUM('Liquidacion_MO'[hsjornal]),
-              "filas", COUNTROWS('Liquidacion_MO')),
-            "fecha", 'Liquidacion_MO'[fecha_tarea], "hs", [hs], "filas", [filas])
+            "Estado", 'Horas_Personal_AppSheet'[Estado], "mes", [mes],
+            "filas", [filas], "horas", [horas])
           """)
           PY
