@@ -1,0 +1,67 @@
+name: DIAGNOSTICO temporal - estados y fechas
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  inspeccionar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          POWERBI_WORKSPACE_ID: ${{ secrets.POWERBI_WORKSPACE_ID }}
+          POWERBI_DATASET_ID: ${{ secrets.POWERBI_DATASET_ID }}
+        run: |
+          python - <<'PY'
+          import os, sys
+          sys.path.insert(0, "scripts")
+          from motor_agregacion import (obtener_access_token_service_principal,
+                                        cargar_desde_power_bi_service)
+          from motor_produccion import calcular_fechas, _d
+          tok = obtener_access_token_service_principal(
+              os.environ["AZURE_TENANT_ID"], os.environ["AZURE_CLIENT_ID"],
+              os.environ["AZURE_CLIENT_SECRET"])
+          ws, ds = os.environ["POWERBI_WORKSPACE_ID"], os.environ["POWERBI_DATASET_ID"]
+          f = calcular_fechas()
+          print(f"SEMANA DEL INFORME: {f['lunes_actual']} a {f['domingo_actual']}\n")
+
+          def correr(t, dax):
+              print("="*68); print(t); print("="*68)
+              try:
+                  df = cargar_desde_power_bi_service(ws, ds, dax, tok)
+                  print(df.to_string(index=False) if len(df) else "(sin filas)")
+              except Exception as e:
+                  print(f"ERROR: {type(e).__name__}: {str(e)[:400]}")
+              print()
+
+          correr("ESTADOS en Horas_Personal_AppSheet (semana del informe)", f"""
+          EVALUATE
+          SELECTCOLUMNS(
+            SUMMARIZECOLUMNS('Horas_Personal_AppSheet'[Estado],
+              FILTER('Horas_Personal_AppSheet',
+                'Horas_Personal_AppSheet'[Fecha] >= {_d(f['lunes_actual'])} &&
+                'Horas_Personal_AppSheet'[Fecha] <= {_d(f['domingo_actual'])}),
+              "filas", COUNTROWS('Horas_Personal_AppSheet'),
+              "horas", SUM('Horas_Personal_AppSheet'[Horas])),
+            "Estado", 'Horas_Personal_AppSheet'[Estado], "filas", [filas], "horas", [horas])
+          """)
+
+          correr("Liquidacion_MO por fecha_tarea (semana del informe)", f"""
+          EVALUATE
+          SELECTCOLUMNS(
+            SUMMARIZECOLUMNS('Liquidacion_MO'[fecha_tarea],
+              FILTER('Liquidacion_MO',
+                'Liquidacion_MO'[fecha_tarea] >= {_d(f['lunes_actual'])} &&
+                'Liquidacion_MO'[fecha_tarea] <= {_d(f['domingo_actual'])}),
+              "hs", SUM('Liquidacion_MO'[hsjornal]),
+              "filas", COUNTROWS('Liquidacion_MO')),
+            "fecha", 'Liquidacion_MO'[fecha_tarea], "hs", [hs], "filas", [filas])
+          """)
+          PY
