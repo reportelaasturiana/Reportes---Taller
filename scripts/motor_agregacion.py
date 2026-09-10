@@ -216,21 +216,79 @@ def construir_estados_lf(df_actual):
 # Bloque 8: horasChinagroData
 # ---------------------------------------------------------------------------
  
+DIAS_CORTOS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
+
+
 def construir_horas_chinagro(df_actual, df_liquidacion_mo):
-    """df_liquidacion_mo: filas de Liquidacion_MO de la misma semana, con columnas
-    Cuil, hsjornal. Cruce por Cuil (NO por legajo/legajoemp: 'legajoemp' está vacío
-    en >99% de las filas recientes de Horas_Personal_AppSheet -- hallazgo confirmado
-    en vivo; 'Cuil' en cambio está poblado de forma confiable en ambas tablas)."""
-    chin_por_cuil = df_liquidacion_mo.groupby("Cuil")["hsjornal"].sum() if df_liquidacion_mo is not None else pd.Series(dtype=float)
+    """Cuadro "Horas por mecanico -- Declaradas (AppSheet) vs Chinagro".
+
+    df_liquidacion_mo: filas de Liquidacion_MO de la misma semana, con columnas
+    Cuil, hsjornal y (desde 10/9/2026) fecha_tarea. Cruce por Cuil (NO por
+    legajo/legajoemp: 'legajoemp' esta vacio en >99% de las filas recientes de
+    Horas_Personal_AppSheet -- hallazgo confirmado en vivo; 'Cuil' en cambio esta
+    poblado de forma confiable en ambas tablas).
+
+    QUE HORAS SE CUENTAN (decidido por el usuario el 10/9/2026):
+      - "Aprobado"  -> se suman en `decl`, la columna AppSheet.
+      - "Pendiente" -> NO se suman; se informan aparte en `pend`.
+      - "Rechazado" -> se descartan por completo.
+
+    OJO: en AppSheet nadie aprueba desde el 28/07/2026 (ultima fila con estado
+    Aprobado). En las semanas posteriores `decl` da 0 y todo el volumen aparece
+    en `pend`. Eso NO es un error del informe: es que el circuito de aprobacion
+    esta parado. Si algun dia se retoma, el cuadro se llena solo.
+    """
+    hay_liq = df_liquidacion_mo is not None and len(df_liquidacion_mo) > 0
+    if hay_liq:
+        liq = df_liquidacion_mo.copy()
+        liq["hsjornal"] = pd.to_numeric(liq["hsjornal"], errors="coerce").fillna(0.0)
+        chin_por_cuil = liq.groupby("Cuil")["hsjornal"].sum()
+        # el detalle diario solo se puede armar si la consulta trajo la fecha
+        if "fecha_tarea" in liq.columns:
+            liq["_dia"] = pd.to_datetime(liq["fecha_tarea"], errors="coerce").dt.date
+            chin_por_dia = liq.dropna(subset=["_dia"]).groupby(["Cuil", "_dia"])["hsjornal"].sum()
+        else:
+            chin_por_dia = None
+    else:
+        chin_por_cuil, chin_por_dia = pd.Series(dtype=float), None
+
     out = []
     for email, g in df_actual.groupby("Email"):
         if pd.isna(email):
             continue
         mecs = []
         for mec, gm in g.groupby("Mecanico"):
+            if "Estado" in gm.columns:
+                estado = gm["Estado"].astype(str).str.strip().str.lower()
+                aprobadas = gm[estado == "aprobado"]
+                pendientes = gm[estado == "pendiente"]
+            else:
+                aprobadas, pendientes = gm, gm.iloc[0:0]
+
             cuil = gm["Cuil"].dropna().iloc[0] if gm["Cuil"].notna().any() else None
-            chin = float(chin_por_cuil.get(cuil)) if cuil is not None and cuil in chin_por_cuil.index else None
-            mecs.append({"m": mec, "decl": r1(gm["Horas"].sum()), "chin": (r1(chin) if chin is not None else None)})
+            tiene_chin = cuil is not None and cuil in chin_por_cuil.index
+            chin = float(chin_por_cuil.get(cuil)) if tiene_chin else None
+
+            dias = []
+            if chin_por_dia is not None and cuil is not None:
+                ap_por_dia = (aprobadas.groupby(aprobadas["FechaDT"].dt.date)["Horas"].sum()
+                              if len(aprobadas) else pd.Series(dtype=float))
+                chin_mec = (chin_por_dia.loc[cuil] if cuil in chin_por_dia.index.get_level_values(0)
+                            else pd.Series(dtype=float))
+                for d in sorted(set(ap_por_dia.index) | set(chin_mec.index)):
+                    dias.append({
+                        "d": f"{DIAS_CORTOS[d.weekday()]} {d.day:02d}/{d.month:02d}",
+                        "decl": r1(float(ap_por_dia.get(d, 0.0))),
+                        "chin": r1(float(chin_mec.get(d, 0.0))),
+                    })
+
+            mecs.append({
+                "m": mec,
+                "decl": r1(aprobadas["Horas"].sum()),
+                "pend": r1(pendientes["Horas"].sum()),
+                "chin": (r1(chin) if chin is not None else None),
+                "dias": dias,
+            })
         out.append({
             "nm": EMAIL_A_USUARIO.get(email, email),
             "email": email,
@@ -238,8 +296,8 @@ def construir_horas_chinagro(df_actual, df_liquidacion_mo):
             "mecs": mecs,
         })
     return out
- 
- 
+
+
 # ---------------------------------------------------------------------------
 # Bloque 9: maquinasTop
 # ---------------------------------------------------------------------------

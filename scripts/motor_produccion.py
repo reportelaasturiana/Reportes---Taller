@@ -140,16 +140,22 @@ def dax_liquidacion_mo(desde, hasta):
     # completo (ej. "Liquidacion_MO[Cuil]"), no simplemente "Cuil". Se probó en
     # vivo con la consulta de Propiedad y confirmó el problema antes de aplicar
     # este arreglo a todas las consultas que agrupan sin alias.
+    # Se agrupa tambien por fecha_tarea (antes era solo por Cuil) para poder abrir
+    # el detalle dia por dia de cada mecanico en el cuadro AppSheet vs Chinagro.
+    # El total por mecanico se sigue obteniendo sumando los dias.
     return f"""
 EVALUATE
 SELECTCOLUMNS(
     SUMMARIZECOLUMNS(
         'Liquidacion_MO'[Cuil],
-        "hsjornal", CALCULATE(SUM('Liquidacion_MO'[hsjornal]),
-            'Liquidacion_MO'[fecha_tarea] >= {_d(desde)},
-            'Liquidacion_MO'[fecha_tarea] <= {_d(hasta)})
+        'Liquidacion_MO'[fecha_tarea],
+        FILTER('Liquidacion_MO',
+            'Liquidacion_MO'[fecha_tarea] >= {_d(desde)} &&
+            'Liquidacion_MO'[fecha_tarea] <= {_d(hasta)}),
+        "hsjornal", SUM('Liquidacion_MO'[hsjornal])
     ),
     "Cuil", 'Liquidacion_MO'[Cuil],
+    "fecha_tarea", 'Liquidacion_MO'[fecha_tarea],
     "hsjornal", [hsjornal]
 )
 """
@@ -310,6 +316,8 @@ def construir_todo():
  
     # --- Chinagro (Liquidacion_MO) ---
     df_liq = pbi(dax_liquidacion_mo(f["lunes_actual"], f["domingo_actual"]))
+    if "fecha_tarea" in df_liq.columns:
+        df_liq["fecha_tarea"] = parsear_fecha_pbi_service(df_liq["fecha_tarea"])
     horas_chinagro_data = construir_horas_chinagro(df_actual, df_liq)
  
     # --- Fluidos (ConsumosyReparaciones, rubro LUBRICANTE, año actual) ---

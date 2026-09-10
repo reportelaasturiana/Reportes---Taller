@@ -426,7 +426,11 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
  
 <div class="card mb18">
   <div class="ctit">⏱️ Horas por mecánico — Declaradas (AppSheet) vs Horas Chinagro (liquidación)</div>
-  <div class="sec-sub">Por usuario que carga · tocá para ver cada mecánico · compara lo declarado (total_hs_taller de la semana) con las horas de liquidación MO (lo que se le va a pagar). El resumido muestra horas cargadas por ese usuario esta semana y cuántos mecánicos cargó. 🔴 = diferencia ≥ 5 hs entre declarado y liquidación.</div>
+  <div class="sec-sub">Por usuario que carga · tocá un usuario para ver sus mecánicos, y un mecánico para abrir el <strong>detalle día por día</strong> de la semana. Compara lo declarado en AppSheet con las horas de liquidación MO (lo que se le va a pagar). 🔴 = diferencia ≥ 5 hs.</div>
+  <div class="sec-sub" style="background:var(--ac);border-left:3px solid var(--a);padding:8px 10px;border-radius:6px;margin-top:6px">
+    <strong>La columna AppSheet suma únicamente las horas APROBADAS.</strong> Las pendientes de aprobar se muestran aparte en naranja y no se suman; las rechazadas se descartan.
+    Tener en cuenta que <strong>en AppSheet no se aprueba nada desde el 28/07/2026</strong>: mientras eso siga así, esta columna va a dar 0 y todo el volumen va a figurar como pendiente. No es un error del informe, es que el circuito de aprobación está parado.
+  </div>
   <div id="horas-chinagro"></div>
 </div>
  
@@ -665,11 +669,12 @@ function buildHorasChinagro(){
   let html='<div style="display:flex;flex-direction:column;gap:5px">';
   horasChinagroData.forEach((u,ui)=>{
     const declTot=u.mecs.reduce((s,m)=>s+m.decl,0);
+    const pendTot=u.mecs.reduce((s,m)=>s+(m.pend||0),0);
     const nMec=u.mecs.length;
     const mecRows=u.mecs.slice().sort((a,b)=>b.decl-a.decl).map((m,mi)=>{
       if(m.chin===null){
         return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f0f0f0">
-          <span style="font-size:10.5px;color:var(--s);flex:1;min-width:170px">${m.m}</span>
+          <span style="font-size:10.5px;color:var(--s);flex:1;min-width:170px">${m.m}${m.pend>0?` <span style="font-size:8.5px;color:var(--n);font-weight:700">· ${fnum(m.pend)} hs pend.</span>`:''}</span>
           <span style="font-size:10.5px;font-weight:600;min-width:70px;text-align:right">${fnum(m.decl)} hs</span>
           <span style="font-size:10.5px;font-weight:600;min-width:70px;text-align:right;color:var(--s2)">s/d</span>
           <span style="font-size:9px;color:var(--s2);min-width:50px;text-align:right">s/d</span></div>`;
@@ -677,8 +682,12 @@ function buildHorasChinagro(){
       // Rojo = declaro mas horas de taller (AppSheet) que lo liquidado en Chinagro (senal a revisar).
       // Verde = declaro igual o menos (normal: Chinagro suele incluir horas pagas fuera de taller).
       const gap=m.decl-m.chin;
+      // Sin horas aprobadas no hay comparacion posible. Si se dejara el calculo,
+      // 0 - chinagro daria negativo y se pintaria VERDE, que se lee como "todo
+      // bien" cuando en realidad no hay nada aprobado. Se muestra en gris.
+      const sinAp=m.decl===0&&(m.pend||0)>0;
       const esRojo=gap>0;
-      const col=esRojo?'var(--r)':'var(--v)';
+      const col=sinAp?'var(--s2)':(esRojo?'var(--r)':'var(--v)');
       const sign=gap>0?'+':gap<0?'−':'±';
       const hasDaily=Array.isArray(m.dias)&&m.dias.length>0;
       const detId='dchin-'+ui+'-'+mi;
@@ -692,10 +701,10 @@ function buildHorasChinagro(){
       }).join(''):'';
       return `<div style="border-bottom:1px solid #f0f0f0">
         <div style="display:flex;align-items:center;gap:8px;padding:4px 0${hasDaily?';cursor:pointer':''}"${hasDaily?` onclick="toggleMaqDetail('${detId}')"`:''}>
-          <span style="font-size:10.5px;color:var(--s);flex:1;min-width:170px">${m.m}${m.split?' <span style="font-size:8.5px;color:var(--s2)">(carga compartida)</span>':''}${hasDaily?` <span id="${detId}-arr" style="color:var(--s2);font-size:9px">▸</span>`:''}</span>
+          <span style="font-size:10.5px;color:var(--s);flex:1;min-width:170px">${m.m}${m.pend>0?` <span style="font-size:8.5px;color:var(--n);font-weight:700">· ${fnum(m.pend)} hs pend.</span>`:''}${m.split?' <span style="font-size:8.5px;color:var(--s2)">(carga compartida)</span>':''}${hasDaily?` <span id="${detId}-arr" style="color:var(--s2);font-size:9px">▸</span>`:''}</span>
           <span style="font-size:10.5px;font-weight:700;min-width:70px;text-align:right;color:${col}">${fnum(m.decl)} hs</span>
           <span style="font-size:10.5px;font-weight:600;min-width:70px;text-align:right;color:var(--s)">${fnum(m.chin)} hs</span>
-          <span style="font-size:11px;font-weight:800;min-width:50px;text-align:right;color:${col}">${sign}${fnum(Math.abs(gap))}hs</span>
+          <span style="font-size:11px;font-weight:800;min-width:50px;text-align:right;color:${col}">${sinAp?'—':sign+fnum(Math.abs(gap))+'hs'}</span>
         </div>
         ${hasDaily?`<div id="${detId}" style="display:none;padding:2px 0 4px">${dailyHtml}</div>`:''}
       </div>`;
@@ -704,7 +713,7 @@ function buildHorasChinagro(){
       <div class="rk-hdr" onclick="toggleBody(this)" style="grid-template-columns:36px 1fr auto auto">
         <div class="usr-av" style="background:${u.col};width:30px;height:30px;font-size:12px">${u.nm.charAt(0)}</div>
         <div><div style="font-size:12px;font-weight:600">${u.nm}</div><div style="font-size:10px;color:var(--s)">${u.email}</div></div>
-        <div style="text-align:right;padding-right:8px"><div style="font-size:15px;font-weight:800">${fnum(declTot)} hs</div><div style="font-size:9.5px;color:var(--s)">cargadas esta sem.</div></div>
+        <div style="text-align:right;padding-right:8px"><div style="font-size:15px;font-weight:800">${fnum(declTot)} hs</div><div style="font-size:9.5px;color:var(--s)">aprobadas esta sem.</div>${pendTot>0?`<div style="font-size:9.5px;color:var(--n);font-weight:700">+${fnum(pendTot)} hs pendientes</div>`:''}</div>
         <div style="text-align:right"><div style="font-size:12px;font-weight:700">${nMec} mec</div><div style="font-size:9.5px;color:var(--s)">cargó esta sem.</div></div>
       </div>
       <div class="rk-body">
