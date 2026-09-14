@@ -640,6 +640,115 @@ def construir_top_supervisores(df_actual):
  
  
 # ---------------------------------------------------------------------------
+# Ranking de tractoristas (pestaña "Asistencias a campo")
+# ---------------------------------------------------------------------------
+
+def _clasificar_reparacion(tipo):
+    """Tipo_Reparacion -> "rotura" | "mant" | "otro".
+
+    Es el unico campo del modelo que separa lo que le pasa a una maquina por como
+    se usa, de lo que estaba programado. Motivo_Rotura no sirve para eso: en 90
+    dias tiene 5.431 "Rotura por Desgaste" contra 15 "Negligencia", porque nadie
+    elige una opcion que manda al frente a un companero."""
+    t = str(tipo or "").strip().lower()
+    if t.startswith("rotura"):
+        return "rotura"
+    if t.startswith("mantenimiento"):
+        return "mant"
+    return "otro"
+
+
+def construir_ranking_tractoristas(df_campo, empleados=None, dias_reincidencia=45):
+    """Ranking de tractoristas por asistencias a campo recibidas.
+
+    La idea: el motivo declarado no sirve para detectar mal uso, pero el PATRON
+    si. Nadie va a marcar "Negligencia" en la app, y nadie puede esconder que a
+    la misma maquina hubo que ir a arreglarle lo mismo cuatro veces.
+
+    Por eso se ordena por ROTURAS y no por asistencias totales: el mantenimiento
+    de campaña es programado y no es culpa de nadie, asi que contarlo castigaria
+    al que mas mantenimiento hace.
+
+    `reinc` cuenta los pares maquina+subrubro que se repitieron dentro de
+    `dias_reincidencia`. Un par que aparece 3 veces suma 2 reincidencias (la
+    primera vez no es reincidir).
+
+    empleados: dict {cuil: nombre}. El Conductor viene como CUIL; sin esto el
+    ranking mostraria numeros.
+    """
+    df = df_campo.copy()
+    if not len(df):
+        return []
+
+    df["FechaDT"] = pd.to_datetime(df.get("Fecha"), errors="coerce")
+    for col in ("Horas", "HorasPrep", "HorasTraslado"):
+        df[col] = pd.to_numeric(df.get(col), errors="coerce").fillna(0.0)
+    df["_sub"] = df["SubRubro"].fillna("").astype(str).str.strip()
+    df["_maq"] = df["Maquina"].fillna("(sin máquina)").astype(str).str.strip()
+    df["_cond"] = df["Conductor"].fillna("").astype(str).str.strip()
+    df["_tipo"] = df["TipoReparacion"].map(_clasificar_reparacion)
+
+    # Mismo criterio que el top de supervisores: los traslados de tractoristas no
+    # son una asistencia por rotura.
+    df = df[~df["_sub"].map(codigo_subrubro).isin(SUBRUBROS_EXCLUIDOS_CAMPO)]
+    # Sin conductor no hay a quien atribuirlo (en campo es <2% de las filas).
+    df = df[(df["_cond"] != "") & df["FechaDT"].notna()]
+    if not len(df):
+        return []
+
+    empleados = empleados or {}
+    out = []
+    for cond, g in df.groupby("_cond"):
+        # Reincidencia: mismo par maquina+subrubro repetido en la ventana, pero
+        # SOLO sobre roturas. Un mantenimiento de campaña partido en dos dias
+        # seguidos aparecia como "reincidencia" y no lo es: es la misma tarea
+        # programada, no algo que se volvio a romper.
+        reinc, pares_reinc = 0, []
+        for (maq, sub), gp in g[g["_tipo"] == "rotura"].groupby(["_maq", "_sub"]):
+            fechas = sorted(gp["FechaDT"].dt.date.unique())
+            if len(fechas) < 2:
+                continue
+            repes = sum(1 for a, b in zip(fechas, fechas[1:])
+                        if (b - a).days <= dias_reincidencia)
+            if repes:
+                reinc += repes
+                pares_reinc.append({"maq": maq, "sub": sub, "veces": len(fechas)})
+
+        maquinas = []
+        for maq, gm in g.groupby("_maq"):
+            items = [{
+                "f": r["FechaDT"].strftime("%d/%m"),
+                "sub": r["_sub"] or "(sin subrubro)",
+                "tipo": r["_tipo"],
+                "mec": r["Mecanico"] if pd.notna(r.get("Mecanico")) else "",
+                "hs": r1(r["Horas"] + r["HorasPrep"] + r["HorasTraslado"]),
+            } for _, r in gm.sort_values("FechaDT", ascending=False).iterrows()]
+            maquinas.append({
+                "maq": maq, "n": len(gm),
+                "rot": int((gm["_tipo"] == "rotura").sum()),
+                "hs": r1((gm["Horas"] + gm["HorasPrep"] + gm["HorasTraslado"]).sum()),
+                "items": items,
+            })
+        maquinas.sort(key=lambda m: (-m["rot"], -m["n"]))
+
+        out.append({
+            "cuil": cond,
+            "n": empleados.get(cond, cond),
+            "asis": len(g),
+            "rot": int((g["_tipo"] == "rotura").sum()),
+            "mant": int((g["_tipo"] == "mant").sum()),
+            "maqs": int(g["_maq"].nunique()),
+            "hs": r1((g["Horas"] + g["HorasPrep"] + g["HorasTraslado"]).sum()),
+            "reinc": reinc,
+            "pares": sorted(pares_reinc, key=lambda x: -x["veces"])[:5],
+            "maquinas": maquinas,
+        })
+
+    out.sort(key=lambda x: (-x["rot"], -x["reinc"], -x["hs"]))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Bloque 1: quincenas (requiere histórico año en curso — extracto aparte)
 # ---------------------------------------------------------------------------
  

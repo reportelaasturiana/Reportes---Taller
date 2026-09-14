@@ -30,7 +30,7 @@ from motor_agregacion import (
     construir_rubros_taller, construir_ausentes_nuevos, construir_estados_lf,
     construir_horas_chinagro, construir_maquinas_top, construir_top_supervisores,
     construir_fluidos, construir_comp_mirar, construir_quincenas, clasificar_fluido,
-    construir_revision_diaria,
+    construir_revision_diaria, construir_ranking_tractoristas,
     calcular_kpis_taller, generar_nota_pico_horas, generar_nota_lider_supervisores,
     obtener_access_token_service_principal, cargar_desde_power_bi_service,
     parsear_fecha_pbi_service,
@@ -58,6 +58,9 @@ FECHA_MOV_MINIMA = pd.Timestamp("2015-01-01")
 
 # Dias hacia atras que cubre el informe diario "Chinagro vs App".
 DIAS_REVISION_DIARIA = 30
+
+# Dias hacia atras del ranking de tractoristas de "Asistencias a campo".
+DIAS_RANKING_TRACTORISTAS = 90
 
 
 def limpiar_fechas_mov(df, hoy, etiqueta):
@@ -101,6 +104,9 @@ def calcular_fechas(hoy=None):
         # Ventana del informe diario. 30 dias alcanzan para que el filtro de
         # fecha sea util sin inflar el HTML: son ~4 semanas de tareas.
         "desde_diario": hoy - datetime.timedelta(days=DIAS_REVISION_DIARIA),
+        # El ranking de tractoristas necesita varias semanas: con una sola, un
+        # conductor aparece 1 o 2 veces y la reincidencia no se distingue del ruido.
+        "desde_conductores": hoy - datetime.timedelta(days=DIAS_RANKING_TRACTORISTAS),
         "desde_anio": datetime.date(hoy.year, 1, 1),
     }
  
@@ -140,6 +146,54 @@ SELECTCOLUMNS(
 """
  
  
+def dax_campo_conductores(desde, hasta):
+    """Salidas a CAMPO con el conductor de la maquina, para el ranking de
+    tractoristas. Va aparte de dax_horas y no como columnas extra de aquella
+    porque solo la necesita este bloque: sumarle 3 columnas a la consulta general
+    engordaria tambien el informe diario, que arrastra 30 dias de tareas.
+
+    Campos que trae y hoy no se usaban en ningun lado:
+      [Conductor]       el tractorista, como CUIL (hay que cruzarlo por nombre).
+                        En salidas a campo viene cargado en el 98,7% de las filas.
+      [Tipo_Reparacion] "Rotura" vs "Mantenimiento Campaña". ES el campo util
+                        para separar lo que es culpa de alguien de lo programado.
+      [Motivo_Rotura]   se trae como referencia, pero NO sirve para detectar
+                        negligencia: en 90 dias hay 5.431 "Rotura por Desgaste"
+                        contra 15 "Negligencia". Nadie manda al frente al
+                        companero eligiendo una opcion de una lista.
+    """
+    return f"""
+EVALUATE
+SELECTCOLUMNS(
+    FILTER('Horas_Personal_AppSheet',
+        'Horas_Personal_AppSheet'[Fecha] >= {_d(desde)} &&
+        'Horas_Personal_AppSheet'[Fecha] <= {_d(hasta)} &&
+        LEFT('Horas_Personal_AppSheet'[Lugar],5) = "CAMPO"
+    ),
+    "Fecha", 'Horas_Personal_AppSheet'[Fecha],
+    "Conductor", 'Horas_Personal_AppSheet'[Conductor],
+    "Mecanico", 'Horas_Personal_AppSheet'[Mecánico],
+    "Maquina", 'Horas_Personal_AppSheet'[Máquina],
+    "SubRubro", 'Horas_Personal_AppSheet'[Sub Rubro],
+    "TipoReparacion", 'Horas_Personal_AppSheet'[Tipo_Reparacion],
+    "MotivoRotura", 'Horas_Personal_AppSheet'[Motivo_Rotura],
+    "Horas", 'Horas_Personal_AppSheet'[Horas],
+    "HorasPrep", 'Horas_Personal_AppSheet'[Horas_Preparacion],
+    "HorasTraslado", 'Horas_Personal_AppSheet'[Horas_Traslado]
+)
+"""
+
+
+# El Conductor viene como CUIL: sin esto el ranking mostraria numeros.
+DAX_EMPLEADOS = """
+EVALUATE
+SELECTCOLUMNS('Maestro_Empleados',
+    "Cuil", 'Maestro_Empleados'[Cuil],
+    "nombre", 'Maestro_Empleados'[nombre_completo]
+)
+"""
+
+
 def dax_liquidacion_mo(desde, hasta):
     # Nota: se envuelve el SUMMARIZECOLUMNS en un SELECTCOLUMNS para forzar nombres
     # de columna predecibles -- una columna de agrupacion SIN alias (como
@@ -378,9 +432,25 @@ def construir_todo():
         "estados_lf": estados_lf, "horas_chinagro_data": horas_chinagro_data,
         "generado_en": generado_en,
     }
+    # --- Ranking de tractoristas (pestaña "Asistencias a campo") ---
+    df_cond = pbi(dax_campo_conductores(f["desde_conductores"], f["hoy"]))
+    df_emp = pbi(DAX_EMPLEADOS)
+    # El Conductor llega como texto y el Cuil del maestro como numero: se
+    # normalizan los dos a digitos, si no el cruce no engancha nunca.
+    empleados = {}
+    for _, r in df_emp.iterrows():
+        cuil = str(r.get("Cuil") or "").strip().split(".")[0]
+        if cuil and pd.notna(r.get("nombre")):
+            empleados[cuil] = str(r["nombre"]).strip()
+    ranking_tractoristas = construir_ranking_tractoristas(df_cond, empleados=empleados)
+    print(f"  ranking tractoristas: {len(ranking_tractoristas)} conductores "
+          f"sobre {len(df_cond)} salidas a campo de {DIAS_RANKING_TRACTORISTAS} dias")
+
     ctx_maquinaria = {
         "sem": sem, "notas": notas_maquinaria, "maquinas_top": maquinas_top,
         "comp_mirar": comp_mirar, "fluidos": fluidos, "top_supervisores": top_supervisores,
+        "ranking_tractoristas": ranking_tractoristas,
+        "dias_ranking": DIAS_RANKING_TRACTORISTAS,
         "generado_en": generado_en,
     }
     # --- Informe diario "Chinagro vs App" (ventana propia, mas larga que la semana) ---

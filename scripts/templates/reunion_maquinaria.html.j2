@@ -367,6 +367,15 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
   <div id="tabla-top-supervisores"></div>
   <div class="cnota">{{ notas.lider_supervisores }}</div>
 </div>
+
+<div class="card mb18">
+  <div class="ctit">🚜 Ranking de tractoristas — últimos {{ dias_ranking }} días</div>
+  <div class="sec-sub">Ordenado por <strong>roturas</strong>, no por asistencias totales: el mantenimiento de campaña es programado y no es culpa de nadie. Tocá un tractorista para ver el detalle por máquina.</div>
+  <div class="sec-sub" style="background:var(--ac);border-left:3px solid var(--a);padding:8px 10px;border-radius:6px;margin-top:6px">
+    <strong>Por qué mira el patrón y no el motivo declarado.</strong> En la app casi todos eligen “Rotura por Desgaste”: en {{ dias_ranking }} días hay 5.431 así contra 15 marcadas como “Negligencia”. Nadie manda al frente a un compañero eligiendo una opción de una lista. Lo que sí se puede medir es la <strong>reincidencia</strong>: 🔁 marca cuántas veces hubo que ir a arreglar <strong>lo mismo en la misma máquina</strong>. Una manguera se rompe; la misma manguera tres veces es cómo se está usando.
+  </div>
+  <div id="tabla-tractoristas"></div>
+</div>
 </div><!-- fin tab m-campo -->
  
 <div id="tab-m-frecuencia" class="tab">
@@ -417,6 +426,7 @@ const maquinasTop={{ maquinas_top|tojson }};
 const compMirar={{ comp_mirar|tojson }};
 const fluidos={{ fluidos|tojson }};
 const topSupervisores={{ top_supervisores|tojson }};
+const rankingTractoristas={{ ranking_tractoristas|tojson }};
 </script>
 <script>
 /* ============== RENDER: RANKING MAQUINAS ============== */
@@ -561,6 +571,68 @@ function renderTopSupervisores(){
   </div>`;
   set('tabla-top-supervisores', header+rows);
 }
+
+/* ============== RENDER: RANKING DE TRACTORISTAS ============== */
+function renderTractoristas(){
+  const nz=x=>(''+x).replace('.',',');
+  const COLS='30px 1fr 68px 72px 78px 70px 74px';
+  if(!rankingTractoristas.length){
+    set('tabla-tractoristas','<div style="padding:20px;text-align:center;color:var(--s2);font-size:12px">Sin salidas a campo con conductor cargado en el período.</div>');
+    return;
+  }
+  let rows='';
+  rankingTractoristas.forEach(function(t,i){
+    /* El detalle se agrupa por maquina: es como se discute en la reunion
+       ("a esta maquina le fuimos 4 veces"), no tarea por tarea suelta. */
+    const det=t.maquinas.map(function(m){
+      const items=m.items.map(function(x){
+        const et = x.tipo==='rotura'
+          ? '<span style="color:var(--r);font-weight:700">rotura</span>'
+          : x.tipo==='mant' ? '<span style="color:var(--s2)">mantenim.</span>'
+                            : '<span style="color:var(--s2)">—</span>';
+        return '<tr><td>'+x.f+'</td><td style="font-size:11px;color:var(--s)">'+(x.sub||'—')+
+               '</td><td>'+et+'</td><td style="font-size:11px;color:var(--s)">'+(x.mec||'')+
+               '</td><td class="r">'+nz(x.hs)+' hs</td></tr>';
+      }).join('');
+      return '<div style="margin-bottom:10px">'+
+        '<div style="font-size:11.5px;font-weight:700;margin-bottom:3px">'+m.maq+
+          ' <span style="font-weight:400;color:var(--s)">· '+m.n+' asistencia'+(m.n>1?'s':'')+
+          (m.rot?', <span style="color:var(--r);font-weight:700">'+m.rot+' rotura'+(m.rot>1?'s':'')+'</span>':'')+
+          ' · '+nz(m.hs)+' hs</span></div>'+
+        '<div style="overflow-x:auto"><table class="itbl"><thead><tr>'+
+          '<th>Fecha</th><th>Subrubro</th><th>Tipo</th><th>Mecánico</th><th class="r">Hs</th>'+
+        '</tr></thead><tbody>'+items+'</tbody></table></div></div>';
+    }).join('');
+
+    const alerta=t.pares.length
+      ? '<div style="margin-bottom:8px;padding:7px 9px;background:var(--rc);border-left:3px solid var(--r);border-radius:5px;font-size:11px">'+
+        '<strong>🔁 Le volvió a pasar lo mismo:</strong> '+
+        t.pares.map(function(pz){return pz.maq+' · '+pz.sub+' <strong>×'+pz.veces+'</strong>';}).join(' &nbsp;·&nbsp; ')+
+        '</div>' : '';
+
+    rows+='<div class="rk-row">'+
+      '<div class="rk-hdr" onclick="toggleBody(this)" style="grid-template-columns:'+COLS+'">'+
+        '<div class="rk-num '+(i===0?'n1':i===1?'n2':i===2?'n3':'')+'">'+(i+1)+'</div>'+
+        '<div class="rk-name">'+t.n+'</div>'+
+        '<div class="c" style="text-align:center;font-weight:800;color:'+(t.rot?'var(--r)':'var(--s2)')+'">'+t.rot+'</div>'+
+        '<div class="c" style="text-align:center;color:var(--s)">'+t.mant+'</div>'+
+        '<div class="c" style="text-align:center;font-weight:700;color:'+(t.reinc?'var(--r)':'var(--s2)')+'">'+(t.reinc?'🔁 '+t.reinc:'—')+'</div>'+
+        '<div class="c" style="text-align:center;color:var(--s)">'+t.maqs+'</div>'+
+        '<div class="r" style="text-align:right">'+nz(t.hs)+' hs</div>'+
+      '</div>'+
+      '<div class="rk-body">'+alerta+
+        '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--s);margin-bottom:6px">Detalle por máquina · fechas de más reciente a más vieja</div>'+
+        det+
+      '</div>'+
+    '</div>';
+  });
+  const header='<div style="display:grid;grid-template-columns:'+COLS+';gap:8px;padding:0 12px 8px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--s);border-bottom:1px solid var(--bd);margin-bottom:6px">'+
+    '<div>#</div><div>Tractorista</div><div style="text-align:center">Roturas</div>'+
+    '<div style="text-align:center">Mantenim.</div><div style="text-align:center">Reincide</div>'+
+    '<div style="text-align:center">Máquinas</div><div style="text-align:right">Hs mecánico</div>'+
+  '</div>';
+  set('tabla-tractoristas', header+rows);
+}
  
 </script>
 <script>
@@ -570,6 +642,7 @@ function build(){
   renderFrecRecambio();
   renderFluidos();
   renderTopSupervisores();
+  renderTractoristas();
 }
 build();
 </script>
