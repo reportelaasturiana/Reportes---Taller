@@ -28,10 +28,12 @@ h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-sp
 .fg label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s2)}
 .fg select{font-family:inherit;font-size:12.5px;padding:7px 9px;border:1px solid var(--bd);
   border-radius:8px;background:var(--w);color:var(--t);min-width:150px;cursor:pointer}
+.fg.chico select{min-width:118px}
 .fg select:focus{outline:2px solid var(--b);outline-offset:1px}
 .btn{font-family:inherit;font-size:12px;font-weight:600;padding:8px 14px;border:1px solid var(--bd);
   border-radius:8px;background:var(--w);cursor:pointer;color:var(--s)}
 .btn:hover{background:var(--bg)}
+.aviso{font-size:11px;color:var(--a);font-weight:600;margin-top:8px}
 .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .kpi{flex:1 1 120px;background:var(--bg);border-radius:9px;padding:9px 11px}
 .kpi .k{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s2)}
@@ -42,6 +44,10 @@ h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-sp
   justify-content:center;font-weight:800;font-size:13px;flex:none}
 .cols{display:flex;align-items:center;gap:6px;font-size:11px}
 .n{min-width:52px;text-align:right;font-variant-numeric:tabular-nums}
+/* Trabajo / traslado / preparacion van chicos en TODOS los niveles, igual que en
+   el detalle de tareas. El total, Chinagro y la diferencia quedan al tamaño
+   normal para que se lean de un vistazo. */
+.ns{font-size:10.5px;color:var(--s)}
 .th{font-size:8.5px;font-weight:700;text-transform:uppercase;color:var(--s2);letter-spacing:.05em}
 .lvl2{padding:5px 4px 5px 18px;border-top:1px solid #f2f2f2;display:flex;align-items:center;gap:6px;cursor:pointer}
 .lvl2:hover{background:#fafafa}
@@ -81,12 +87,15 @@ Tocá un usuario para ver sus mecánicos, un mecánico para ver los días, y un 
 <div class="card">
   <div class="ctit">🔎 Filtros</div>
   <div class="filtros">
-    <div class="fg"><label for="f-fecha">Fecha</label><select id="f-fecha"></select></div>
+    <div class="fg chico"><label for="f-desde">Desde</label><select id="f-desde"></select></div>
+    <div class="fg chico"><label for="f-hasta">Hasta</label><select id="f-hasta"></select></div>
+    <div class="fg"><label for="f-lugar">Ubicación</label><select id="f-lugar"></select></div>
     <div class="fg"><label for="f-usuario">Usuario que carga</label><select id="f-usuario"></select></div>
     <div class="fg"><label for="f-mec">Mecánico</label><select id="f-mec"></select></div>
     <div class="fg"><label for="f-estado">Estado</label><select id="f-estado"></select></div>
     <button class="btn" id="f-limpiar">Limpiar</button>
   </div>
+  <div class="aviso oculto" id="aviso-rango">Las fechas estaban al revés, se dieron vuelta para poder filtrar.</div>
   <div class="kpis" id="kpis"></div>
 </div>
 
@@ -104,6 +113,8 @@ const NOM={}, COL={}; D.usuarios.forEach(u=>{NOM[u.em]=u.nm;COL[u.em]=u.col;});
 /* Chinagro indexado por "cuil|fecha": cruzar por clave en vez de recorrer el
    array entero en cada fila, que con 30 dias de tareas se nota. */
 const CH={}; D.chin.forEach(c=>{CH[c.cu+'|'+c.f]=c.hs;});
+/* Las ubicaciones salen de las propias tareas, no hace falta mandarlas aparte. */
+const LUGARES=Object.keys(D.tareas.reduce(function(a,t){if(t.lug)a[t.lug]=1;return a;},{})).sort();
 
 function badge(e){
   const k=(e||'').toLowerCase();
@@ -116,13 +127,20 @@ function opciones(sel,items,todos){
   sel.innerHTML='<option value="">'+todos+'</option>'+
     items.map(i=>'<option value="'+i.v+'">'+i.t+'</option>').join('');
 }
+function val(id){return document.getElementById(id).value;}
+
 function filtradas(){
-  const ff=document.getElementById('f-fecha').value,
-        fu=document.getElementById('f-usuario').value,
-        fm=document.getElementById('f-mec').value,
-        fe=document.getElementById('f-estado').value;
+  let fd=val('f-desde'), fh=val('f-hasta');
+  /* Si eligen un "desde" posterior al "hasta" no se muestra una tabla vacia sin
+     explicacion: se dan vuelta y se avisa. */
+  const dadoVuelta = fd && fh && fd > fh;
+  if(dadoVuelta){const x=fd; fd=fh; fh=x;}
+  document.getElementById('aviso-rango').classList.toggle('oculto', !dadoVuelta);
+
+  const fl=val('f-lugar'), fu=val('f-usuario'), fm=val('f-mec'), fe=val('f-estado');
   return D.tareas.filter(function(t){
-    return (!ff||t.f===ff)&&(!fu||t.em===fu)&&(!fm||t.mec===fm)&&
+    return (!fd||t.f>=fd)&&(!fh||t.f<=fh)&&(!fl||t.lug===fl)&&
+           (!fu||t.em===fu)&&(!fm||t.mec===fm)&&
            (!fe||(t.est||'sin estado').toLowerCase()===fe);
   });
 }
@@ -190,7 +208,7 @@ function render(){
       h+='<div class="lvl2" onclick="tog(\''+mid+'\')">'+
         '<span class="arr" id="'+mid+'-a">▸</span>'+
         '<span class="nom" style="font-weight:600">'+mec+'</span>'+
-        '<span class="n">'+f1(mTr)+'</span><span class="n">'+f1(mTl)+'</span><span class="n">'+f1(mPr)+'</span>'+
+        '<span class="n ns">'+f1(mTr)+'</span><span class="n ns">'+f1(mTl)+'</span><span class="n ns">'+f1(mPr)+'</span>'+
         '<span class="n" style="font-weight:800">'+f1(mTot)+'</span>'+
         '<span class="n" style="color:var(--s)">'+(hayCh?f1(mChin):'s/d')+'</span>'+
         '<span class="n" style="font-weight:800;color:'+(hayCh?dcol:'var(--s2)')+'">'+
@@ -206,17 +224,19 @@ function render(){
           '<span class="arr" id="'+did+'-a">▸</span>'+
           '<span class="nom" style="font-weight:600">'+(ETQ[f]||f)+
             ' <span style="color:var(--s2);font-weight:400">· '+tt.length+' tarea'+(tt.length>1?'s':'')+'</span></span>'+
-          '<span class="n">'+f1(dTr)+'</span><span class="n">'+f1(dTl)+'</span><span class="n">'+f1(dPr)+'</span>'+
+          '<span class="n ns">'+f1(dTr)+'</span><span class="n ns">'+f1(dTl)+'</span><span class="n ns">'+f1(dPr)+'</span>'+
           '<span class="n" style="font-weight:700">'+f1(dTot)+'</span>'+
           '<span class="n" style="color:var(--s)">'+(dCh!==undefined?f1(dCh):'s/d')+'</span>'+
           '<span class="n" style="font-weight:700;color:'+(dCh!==undefined?dcol2:'var(--s2)')+'">'+
             (dCh!==undefined?((dd>0?'+':dd<0?'−':'±')+f1(Math.abs(dd))):'s/d')+'</span>'+
         '</div><div id="'+did+'" class="oculto">';
         tt.forEach(function(t){
-          const det=[t.maq,t.sub||t.rub,t.lug,t.tip].filter(Boolean).join(' · ');
+          /* Maquinaria + subrubro + lugar. El Tipo se saco a pedido del usuario:
+             repetia el rubro y hacia la linea larga sin agregar nada. */
+          const det=[t.maq,t.sub||t.rub,t.lug].filter(Boolean).join(' · ');
           h+='<div class="lvl4"><span class="arr"></span>'+
             '<span class="nom">'+(det||'(sin detalle)')+' '+badge(t.est)+'</span>'+
-            '<span class="n">'+f1(t.hs)+'</span><span class="n">'+f1(t.hst)+'</span><span class="n">'+f1(t.hsp)+'</span>'+
+            '<span class="n ns">'+f1(t.hs)+'</span><span class="n ns">'+f1(t.hst)+'</span><span class="n ns">'+f1(t.hsp)+'</span>'+
             '<span class="n" style="font-weight:600">'+f1(t.hs+t.hst+t.hsp)+'</span>'+
             '<span class="n"></span><span class="n"></span></div>';
         });
@@ -235,17 +255,19 @@ function tog(id){
   if(a)a.textContent=cerrado?'▸':'▾';
 }
 (function init(){
-  opciones(document.getElementById('f-fecha'), D.fechas.map(function(x){return {v:x.f,t:x.et};}), 'Todas las fechas');
+  const fechas=D.fechas.map(function(x){return {v:x.f,t:x.et};});
+  opciones(document.getElementById('f-desde'), fechas, 'Desde el inicio');
+  opciones(document.getElementById('f-hasta'), fechas, 'Hasta el final');
+  opciones(document.getElementById('f-lugar'), LUGARES.map(function(l){return {v:l,t:l};}), 'Todas las ubicaciones');
   opciones(document.getElementById('f-usuario'), D.usuarios.map(function(u){return {v:u.em,t:u.nm};}), 'Todos los usuarios');
   opciones(document.getElementById('f-mec'), D.mecanicos.map(function(m){return {v:m,t:m};}), 'Todos los mecánicos');
   opciones(document.getElementById('f-estado'),
     [{v:'aprobado',t:'Aprobado'},{v:'pendiente',t:'Pendiente'},{v:'rechazado',t:'Rechazado'},{v:'sin estado',t:'Sin estado'}],
     'Todos los estados');
-  ['f-fecha','f-usuario','f-mec','f-estado'].forEach(function(id){
-    document.getElementById(id).addEventListener('change',render);
-  });
+  const ids=['f-desde','f-hasta','f-lugar','f-usuario','f-mec','f-estado'];
+  ids.forEach(function(id){document.getElementById(id).addEventListener('change',render);});
   document.getElementById('f-limpiar').addEventListener('click',function(){
-    ['f-fecha','f-usuario','f-mec','f-estado'].forEach(function(id){document.getElementById(id).value='';});
+    ids.forEach(function(id){document.getElementById(id).value='';});
     render();
   });
   render();
