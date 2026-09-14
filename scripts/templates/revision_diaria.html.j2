@@ -23,15 +23,20 @@ h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-sp
 .upd{color:var(--s2);font-size:11px;margin-bottom:16px}
 .card{background:var(--w);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh);padding:14px 16px;margin-bottom:14px}
 .ctit{font-family:'Inter Tight',sans-serif;font-weight:800;font-size:15px;margin-bottom:10px}
-.filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
-.fg{display:flex;flex-direction:column;gap:4px}
-.fg label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s2)}
-.fg select{font-family:inherit;font-size:12.5px;padding:7px 9px;border:1px solid var(--bd);
-  border-radius:8px;background:var(--w);color:var(--t);min-width:150px;cursor:pointer}
-.fg.chico select{min-width:118px}
-.fg select:focus{outline:2px solid var(--b);outline-offset:1px}
-.btn{font-family:inherit;font-size:12px;font-weight:600;padding:8px 14px;border:1px solid var(--bd);
-  border-radius:8px;background:var(--w);cursor:pointer;color:var(--s)}
+/* Los 6 filtros + el boton van SIEMPRE en una sola linea. Por eso nowrap y
+   flex:1 con min-width:0 -- sin el min-width:0 un <select> no baja de su
+   contenido y empuja al resto a la linea de abajo. La fuente se achica para que
+   entren. Los de fecha llevan ancho fijo: el calendario nativo no se comprime. */
+.filtros{display:flex;flex-wrap:nowrap;gap:7px;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:3px;flex:1 1 0;min-width:0}
+.fg.chico{flex:0 0 126px}
+.fg label{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fg select,.fg input{font-family:inherit;font-size:11px;padding:6px 7px;border:1px solid var(--bd);
+  border-radius:7px;background:var(--w);color:var(--t);width:100%;min-width:0;cursor:pointer}
+.fg select:focus,.fg input:focus{outline:2px solid var(--b);outline-offset:1px}
+.btn{font-family:inherit;font-size:11px;font-weight:600;padding:6px 11px;border:1px solid var(--bd);
+  border-radius:7px;background:var(--w);cursor:pointer;color:var(--s);flex:none;white-space:nowrap}
 .btn:hover{background:var(--bg)}
 .aviso{font-size:11px;color:var(--a);font-weight:600;margin-top:8px}
 .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
@@ -51,7 +56,10 @@ h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-sp
 .th{font-size:8.5px;font-weight:700;text-transform:uppercase;color:var(--s2);letter-spacing:.05em}
 .lvl2{padding:5px 4px 5px 18px;border-top:1px solid #f2f2f2;display:flex;align-items:center;gap:6px;cursor:pointer}
 .lvl2:hover{background:#fafafa}
-.lvl3{padding:4px 4px 4px 36px;border-top:1px dashed #eee;display:flex;align-items:center;gap:6px;cursor:pointer}
+/* La fila del dia va al mismo tamaño que el detalle de tareas: desplegada,
+   "jue 10/09 · 4 tareas" en 13px quedaba mas grande que todo lo de abajo. */
+.lvl3{padding:4px 4px 4px 36px;border-top:1px dashed #eee;display:flex;align-items:center;gap:6px;
+  cursor:pointer;font-size:10.5px}
 .lvl3:hover{background:#fafafa}
 .lvl4{padding:4px 4px 4px 54px;border-top:1px dotted #f0f0f0;display:flex;align-items:center;gap:6px;
   font-size:10.5px;color:var(--s)}
@@ -65,6 +73,10 @@ h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-sp
 .b-sd{background:#eee;color:var(--s2)}
 .vacio{padding:26px;text-align:center;color:var(--s2);font-size:13px}
 @media(max-width:720px){
+  /* En celular una sola linea no entra: ahi si se permite que bajen. */
+  .filtros{flex-wrap:wrap}
+  .fg{flex:1 1 132px}
+  .fg.chico{flex:1 1 132px}
   .wrap{padding:14px 10px 40px}
   .n{min-width:42px}
   .lvl4{padding-left:26px}
@@ -87,10 +99,10 @@ Tocá un usuario para ver sus mecánicos, un mecánico para ver los días, y un 
 <div class="card">
   <div class="ctit">🔎 Filtros</div>
   <div class="filtros">
-    <div class="fg chico"><label for="f-desde">Desde</label><select id="f-desde"></select></div>
-    <div class="fg chico"><label for="f-hasta">Hasta</label><select id="f-hasta"></select></div>
+    <div class="fg chico"><label for="f-desde">Desde</label><input type="date" id="f-desde"></div>
+    <div class="fg chico"><label for="f-hasta">Hasta</label><input type="date" id="f-hasta"></div>
     <div class="fg"><label for="f-lugar">Ubicación</label><select id="f-lugar"></select></div>
-    <div class="fg"><label for="f-usuario">Usuario que carga</label><select id="f-usuario"></select></div>
+    <div class="fg"><label for="f-usuario">Usuario</label><select id="f-usuario"></select></div>
     <div class="fg"><label for="f-mec">Mecánico</label><select id="f-mec"></select></div>
     <div class="fg"><label for="f-estado">Estado</label><select id="f-estado"></select></div>
     <button class="btn" id="f-limpiar">Limpiar</button>
@@ -231,9 +243,10 @@ function render(){
             (dCh!==undefined?((dd>0?'+':dd<0?'−':'±')+f1(Math.abs(dd))):'s/d')+'</span>'+
         '</div><div id="'+did+'" class="oculto">';
         tt.forEach(function(t){
-          /* Maquinaria + subrubro + lugar. El Tipo se saco a pedido del usuario:
-             repetia el rubro y hacia la linea larga sin agregar nada. */
-          const det=[t.maq,t.sub||t.rub,t.lug].filter(Boolean).join(' · ');
+          /* Lugar + maquinaria + subrubro, en ese orden: primero DONDE se hizo,
+             despues sobre que maquina y por ultimo la tarea. El Tipo se saco
+             porque repetia el rubro y alargaba la linea sin agregar nada. */
+          const det=[t.lug,t.maq,t.sub||t.rub].filter(Boolean).join(' · ');
           h+='<div class="lvl4"><span class="arr"></span>'+
             '<span class="nom">'+(det||'(sin detalle)')+' '+badge(t.est)+'</span>'+
             '<span class="n ns">'+f1(t.hs)+'</span><span class="n ns">'+f1(t.hst)+'</span><span class="n ns">'+f1(t.hsp)+'</span>'+
@@ -255,9 +268,13 @@ function tog(id){
   if(a)a.textContent=cerrado?'▸':'▾';
 }
 (function init(){
-  const fechas=D.fechas.map(function(x){return {v:x.f,t:x.et};});
-  opciones(document.getElementById('f-desde'), fechas, 'Desde el inicio');
-  opciones(document.getElementById('f-hasta'), fechas, 'Hasta el final');
+  /* Calendario nativo, acotado al periodo que trae el informe: asi no se puede
+     elegir una fecha para la que no hay datos. D.fechas viene de mas nueva a mas
+     vieja, por eso el minimo es la ultima y el maximo la primera. */
+  const fMin=D.fechas.length?D.fechas[D.fechas.length-1].f:'', fMax=D.fechas.length?D.fechas[0].f:'';
+  ['f-desde','f-hasta'].forEach(function(id){
+    const e=document.getElementById(id); e.min=fMin; e.max=fMax;
+  });
   opciones(document.getElementById('f-lugar'), LUGARES.map(function(l){return {v:l,t:l};}), 'Todas las ubicaciones');
   opciones(document.getElementById('f-usuario'), D.usuarios.map(function(u){return {v:u.em,t:u.nm};}), 'Todos los usuarios');
   opciones(document.getElementById('f-mec'), D.mecanicos.map(function(m){return {v:m,t:m};}), 'Todos los mecánicos');
