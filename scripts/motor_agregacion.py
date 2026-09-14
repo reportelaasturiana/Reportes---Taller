@@ -595,8 +595,32 @@ def clasificar_fluido(nombre_insumo):
 # Bloque 12: topSupervisores
 # ---------------------------------------------------------------------------
  
+# Subrubros que NO son una asistencia a campo y ensuciaban el Top de supervisores.
+# El 386 "TRASLADOS TRACTORISTAS" es traslado de tractoristas, no un mecanico
+# yendo a asistir una maquina. Pesaba: al 14/9/2026 eran 14 de 46 registros (30%)
+# y 40 hs. Se excluye por el CODIGO del principio y no por el texto completo,
+# para que siga andando si le cambian la descripcion en AppSheet.
+SUBRUBROS_EXCLUIDOS_CAMPO = {"386"}
+
+
+def codigo_subrubro(sub):
+    """'386. TRASLADOS TRACTORISTAS' -> '386'. None si no arranca con un numero."""
+    if not isinstance(sub, str):
+        return None
+    m = re.match(r"\s*(\d+)", sub)
+    return m.group(1) if m else None
+
+
 def construir_top_supervisores(df_actual):
     campo_rows = df_actual[df_actual["TipoLugar"] == "CAMPO"]
+    # El filtro va ANTES de agrupar, asi se cae de las visitas y de los totales
+    # tambien: si solo se sacara del detalle, la cabecera no cerraria con lo que
+    # se ve al desplegar.
+    excluidas = campo_rows["SubRubro"].map(codigo_subrubro).isin(SUBRUBROS_EXCLUIDOS_CAMPO)
+    if excluidas.any():
+        print(f"  topSupervisores: excluidas {int(excluidas.sum())} filas de subrubros "
+              f"{sorted(SUBRUBROS_EXCLUIDOS_CAMPO)} (no son asistencias a campo)")
+    campo_rows = campo_rows[~excluidas]
     out = []
     for sup, g in campo_rows.groupby("Supervisor"):
         if pd.isna(sup):
