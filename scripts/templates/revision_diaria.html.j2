@@ -1,0 +1,255 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chinagro vs App · Revisión de horas diarias</title>
+<link rel="icon" href="logo.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800;900&display=swap');
+:root{
+  --r:#c0392b;--rc:#fdecea;--v:#4a7c2f;--vc:#eaf3de;--a:#e65100;--ac:#fff3e0;
+  --b:#1565c0;--t:#1a1a1a;--s:#555;--s2:#999;--bd:#e2e2e2;--bg:#f2f2f2;--w:#fff;
+  --sh:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t);font-family:'Inter',-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;font-size:13px}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 50px}
+header{display:flex;align-items:center;gap:13px}
+header img{width:34px;height:44px;object-fit:contain}
+.enm{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:17px;letter-spacing:-.02em;line-height:1.1}
+.esb{font-size:11px;color:var(--s)}
+h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-spacing:-.02em;margin:14px 0 4px}
+.sub{color:var(--s);font-size:12.5px;line-height:1.5;margin:0 0 4px}
+.upd{color:var(--s2);font-size:11px;margin-bottom:16px}
+.card{background:var(--w);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh);padding:14px 16px;margin-bottom:14px}
+.ctit{font-family:'Inter Tight',sans-serif;font-weight:800;font-size:15px;margin-bottom:10px}
+.filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s2)}
+.fg select{font-family:inherit;font-size:12.5px;padding:7px 9px;border:1px solid var(--bd);
+  border-radius:8px;background:var(--w);color:var(--t);min-width:150px;cursor:pointer}
+.fg select:focus{outline:2px solid var(--b);outline-offset:1px}
+.btn{font-family:inherit;font-size:12px;font-weight:600;padding:8px 14px;border:1px solid var(--bd);
+  border-radius:8px;background:var(--w);cursor:pointer;color:var(--s)}
+.btn:hover{background:var(--bg)}
+.kpis{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.kpi{flex:1 1 120px;background:var(--bg);border-radius:9px;padding:9px 11px}
+.kpi .k{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s2)}
+.kpi .v{font-size:19px;font-weight:800;font-family:'Inter Tight',sans-serif;margin-top:2px}
+.u-hdr{display:flex;align-items:center;gap:10px;padding:9px 4px;cursor:pointer;border-radius:8px}
+.u-hdr:hover{background:var(--bg)}
+.av{width:30px;height:30px;border-radius:50%;color:#fff;display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:13px;flex:none}
+.cols{display:flex;align-items:center;gap:6px;font-size:11px}
+.n{min-width:52px;text-align:right;font-variant-numeric:tabular-nums}
+.th{font-size:8.5px;font-weight:700;text-transform:uppercase;color:var(--s2);letter-spacing:.05em}
+.lvl2{padding:5px 4px 5px 18px;border-top:1px solid #f2f2f2;display:flex;align-items:center;gap:6px;cursor:pointer}
+.lvl2:hover{background:#fafafa}
+.lvl3{padding:4px 4px 4px 36px;border-top:1px dashed #eee;display:flex;align-items:center;gap:6px;cursor:pointer}
+.lvl3:hover{background:#fafafa}
+.lvl4{padding:4px 4px 4px 54px;border-top:1px dotted #f0f0f0;display:flex;align-items:center;gap:6px;
+  font-size:10.5px;color:var(--s)}
+.oculto{display:none}
+.arr{color:var(--s2);font-size:9px;display:inline-block;width:10px}
+.nom{flex:1;min-width:150px}
+.bdg{font-size:8.5px;font-weight:700;padding:1px 6px;border-radius:20px;white-space:nowrap}
+.b-ap{background:var(--vc);color:var(--v)}
+.b-pe{background:var(--ac);color:var(--a)}
+.b-re{background:var(--rc);color:var(--r)}
+.b-sd{background:#eee;color:var(--s2)}
+.vacio{padding:26px;text-align:center;color:var(--s2);font-size:13px}
+@media(max-width:720px){
+  .wrap{padding:14px 10px 40px}
+  .n{min-width:42px}
+  .lvl4{padding-left:26px}
+  .nom{min-width:110px}
+}
+</style></head>
+<body>
+<div class="wrap">
+
+<header>
+  <img src="logo.png" alt="">
+  <div><div class="enm">La Asturiana</div><div class="esb">Servicios Agrícolas</div></div>
+</header>
+
+<h1>Chinagro vs App</h1>
+<p class="sub">Revisión de cómo se vienen cargando las horas en AppSheet, contra lo que liquida Chinagro.
+Tocá un usuario para ver sus mecánicos, un mecánico para ver los días, y un día para ver <strong>qué tareas cargó</strong>.</p>
+<p class="upd">🕒 Actualizado: {{ generado_en }} · Período: {{ rango }}</p>
+
+<div class="card">
+  <div class="ctit">🔎 Filtros</div>
+  <div class="filtros">
+    <div class="fg"><label for="f-fecha">Fecha</label><select id="f-fecha"></select></div>
+    <div class="fg"><label for="f-usuario">Usuario que carga</label><select id="f-usuario"></select></div>
+    <div class="fg"><label for="f-mec">Mecánico</label><select id="f-mec"></select></div>
+    <div class="fg"><label for="f-estado">Estado</label><select id="f-estado"></select></div>
+    <button class="btn" id="f-limpiar">Limpiar</button>
+  </div>
+  <div class="kpis" id="kpis"></div>
+</div>
+
+<div class="card">
+  <div class="ctit">⏱️ Horas cargadas</div>
+  <div id="tabla"></div>
+</div>
+
+<script>
+const D = {{ datos|tojson }};
+const r1=n=>Math.round(n*10)/10;
+const f1=n=>(''+r1(n)).replace('.',',');
+const ETQ={}; D.fechas.forEach(x=>{ETQ[x.f]=x.et;});
+const NOM={}, COL={}; D.usuarios.forEach(u=>{NOM[u.em]=u.nm;COL[u.em]=u.col;});
+/* Chinagro indexado por "cuil|fecha": cruzar por clave en vez de recorrer el
+   array entero en cada fila, que con 30 dias de tareas se nota. */
+const CH={}; D.chin.forEach(c=>{CH[c.cu+'|'+c.f]=c.hs;});
+
+function badge(e){
+  const k=(e||'').toLowerCase();
+  if(k==='aprobado')  return '<span class="bdg b-ap">aprobado</span>';
+  if(k==='pendiente') return '<span class="bdg b-pe">pendiente</span>';
+  if(k==='rechazado') return '<span class="bdg b-re">rechazado</span>';
+  return '<span class="bdg b-sd">sin estado</span>';
+}
+function opciones(sel,items,todos){
+  sel.innerHTML='<option value="">'+todos+'</option>'+
+    items.map(i=>'<option value="'+i.v+'">'+i.t+'</option>').join('');
+}
+function filtradas(){
+  const ff=document.getElementById('f-fecha').value,
+        fu=document.getElementById('f-usuario').value,
+        fm=document.getElementById('f-mec').value,
+        fe=document.getElementById('f-estado').value;
+  return D.tareas.filter(function(t){
+    return (!ff||t.f===ff)&&(!fu||t.em===fu)&&(!fm||t.mec===fm)&&
+           (!fe||(t.est||'sin estado').toLowerCase()===fe);
+  });
+}
+function sum(a,k){return a.reduce(function(s,x){return s+(x[k]||0);},0);}
+
+function render(){
+  const ts=filtradas();
+
+  /* Chinagro se suma una sola vez por mecanico-dia presente en el filtro. Si se
+     sumara por tarea, un dia con 3 tareas contaria 3 veces lo liquidado. */
+  const pares={}; ts.forEach(function(t){if(t.cu!==null)pares[t.cu+'|'+t.f]=1;});
+  let chinTot=0; Object.keys(pares).forEach(function(p){chinTot+=(CH[p]||0);});
+  const tr=sum(ts,'hs'), tl=sum(ts,'hst'), pr=sum(ts,'hsp'), tot=tr+tl+pr;
+  document.getElementById('kpis').innerHTML=[
+    ['Trabajo',f1(tr)+' hs'],['Traslado',f1(tl)+' hs'],['Preparación',f1(pr)+' hs'],
+    ['Total App',f1(tot)+' hs'],['Chinagro',f1(chinTot)+' hs'],['Tareas',ts.length]
+  ].map(function(x){return '<div class="kpi"><div class="k">'+x[0]+'</div><div class="v">'+x[1]+'</div></div>';}).join('');
+
+  if(!ts.length){document.getElementById('tabla').innerHTML=
+    '<div class="vacio">No hay cargas con estos filtros.</div>';return;}
+
+  const porU={};
+  ts.forEach(function(t){
+    if(!porU[t.em])porU[t.em]={};
+    if(!porU[t.em][t.mec])porU[t.em][t.mec]={};
+    const dd=porU[t.em][t.mec];
+    if(!dd[t.f])dd[t.f]=[];
+    dd[t.f].push(t);
+  });
+
+  let h='';
+  Object.keys(porU).sort(function(a,b){return (NOM[a]||a).localeCompare(NOM[b]||b);}).forEach(function(em,ui){
+    const mecs=porU[em];
+    let todasU=[];
+    Object.keys(mecs).forEach(function(m){Object.keys(mecs[m]).forEach(function(f){todasU=todasU.concat(mecs[m][f]);});});
+    const uTot=sum(todasU,'hs')+sum(todasU,'hst')+sum(todasU,'hsp');
+    h+='<div style="border-bottom:1px solid var(--bd)">'+
+      '<div class="u-hdr" onclick="tog(\'u'+ui+'\')">'+
+        '<span class="arr" id="u'+ui+'-a">▸</span>'+
+        '<div class="av" style="background:'+(COL[em]||'#888')+'">'+((NOM[em]||em||'?').charAt(0))+'</div>'+
+        '<div class="nom"><div style="font-weight:700;font-size:12.5px">'+(NOM[em]||em||'(sin usuario)')+'</div>'+
+          '<div style="font-size:10px;color:var(--s)">'+(em||'')+'</div></div>'+
+        '<div class="cols"><span class="n" style="font-weight:800;font-size:13px">'+f1(uTot)+' hs</span>'+
+          '<span class="n" style="color:var(--s)">'+Object.keys(mecs).length+' mec</span></div>'+
+      '</div>'+
+      '<div id="u'+ui+'" class="oculto">'+
+        '<div class="lvl2" style="cursor:default;background:#fafafa">'+
+          '<span class="arr"></span><span class="nom th">Mecánico / día / tarea</span>'+
+          '<span class="n th">Trab.</span><span class="n th">Trasl.</span><span class="n th">Prep.</span>'+
+          '<span class="n th">Total</span><span class="n th">Chinagro</span><span class="n th">Dif.</span>'+
+        '</div>';
+    Object.keys(mecs).sort().forEach(function(mec,mi){
+      const dias=mecs[mec];
+      let todasM=[];
+      Object.keys(dias).forEach(function(f){todasM=todasM.concat(dias[f]);});
+      const mTr=sum(todasM,'hs'),mTl=sum(todasM,'hst'),mPr=sum(todasM,'hsp'),mTot=mTr+mTl+mPr;
+      let cu=null;
+      todasM.forEach(function(t){if(cu===null&&t.cu!==null)cu=t.cu;});
+      let mChin=0,hayCh=false;
+      if(cu!==null){Object.keys(dias).forEach(function(f){
+        const c=CH[cu+'|'+f]; if(c!==undefined){mChin+=c;hayCh=true;}
+      });}
+      const mid='m'+ui+'-'+mi;
+      const dif=mTot-mChin, dcol=dif>0?'var(--r)':'var(--v)';
+      h+='<div class="lvl2" onclick="tog(\''+mid+'\')">'+
+        '<span class="arr" id="'+mid+'-a">▸</span>'+
+        '<span class="nom" style="font-weight:600">'+mec+'</span>'+
+        '<span class="n">'+f1(mTr)+'</span><span class="n">'+f1(mTl)+'</span><span class="n">'+f1(mPr)+'</span>'+
+        '<span class="n" style="font-weight:800">'+f1(mTot)+'</span>'+
+        '<span class="n" style="color:var(--s)">'+(hayCh?f1(mChin):'s/d')+'</span>'+
+        '<span class="n" style="font-weight:800;color:'+(hayCh?dcol:'var(--s2)')+'">'+
+          (hayCh?((dif>0?'+':dif<0?'−':'±')+f1(Math.abs(dif))):'s/d')+'</span>'+
+      '</div><div id="'+mid+'" class="oculto">';
+      Object.keys(dias).sort().reverse().forEach(function(f,di){
+        const tt=dias[f];
+        const dTr=sum(tt,'hs'),dTl=sum(tt,'hst'),dPr=sum(tt,'hsp'),dTot=dTr+dTl+dPr;
+        const dCh=cu!==null?CH[cu+'|'+f]:undefined;
+        const dd=dTot-(dCh||0), dcol2=dd>0?'var(--r)':'var(--v)';
+        const did=mid+'-d'+di;
+        h+='<div class="lvl3" onclick="tog(\''+did+'\')">'+
+          '<span class="arr" id="'+did+'-a">▸</span>'+
+          '<span class="nom" style="font-weight:600">'+(ETQ[f]||f)+
+            ' <span style="color:var(--s2);font-weight:400">· '+tt.length+' tarea'+(tt.length>1?'s':'')+'</span></span>'+
+          '<span class="n">'+f1(dTr)+'</span><span class="n">'+f1(dTl)+'</span><span class="n">'+f1(dPr)+'</span>'+
+          '<span class="n" style="font-weight:700">'+f1(dTot)+'</span>'+
+          '<span class="n" style="color:var(--s)">'+(dCh!==undefined?f1(dCh):'s/d')+'</span>'+
+          '<span class="n" style="font-weight:700;color:'+(dCh!==undefined?dcol2:'var(--s2)')+'">'+
+            (dCh!==undefined?((dd>0?'+':dd<0?'−':'±')+f1(Math.abs(dd))):'s/d')+'</span>'+
+        '</div><div id="'+did+'" class="oculto">';
+        tt.forEach(function(t){
+          const det=[t.maq,t.sub||t.rub,t.lug,t.tip].filter(Boolean).join(' · ');
+          h+='<div class="lvl4"><span class="arr"></span>'+
+            '<span class="nom">'+(det||'(sin detalle)')+' '+badge(t.est)+'</span>'+
+            '<span class="n">'+f1(t.hs)+'</span><span class="n">'+f1(t.hst)+'</span><span class="n">'+f1(t.hsp)+'</span>'+
+            '<span class="n" style="font-weight:600">'+f1(t.hs+t.hst+t.hsp)+'</span>'+
+            '<span class="n"></span><span class="n"></span></div>';
+        });
+        h+='</div>';
+      });
+      h+='</div>';
+    });
+    h+='</div></div>';
+  });
+  document.getElementById('tabla').innerHTML=h;
+}
+function tog(id){
+  const e=document.getElementById(id), a=document.getElementById(id+'-a');
+  if(!e)return;
+  const cerrado=e.classList.toggle('oculto');
+  if(a)a.textContent=cerrado?'▸':'▾';
+}
+(function init(){
+  opciones(document.getElementById('f-fecha'), D.fechas.map(function(x){return {v:x.f,t:x.et};}), 'Todas las fechas');
+  opciones(document.getElementById('f-usuario'), D.usuarios.map(function(u){return {v:u.em,t:u.nm};}), 'Todos los usuarios');
+  opciones(document.getElementById('f-mec'), D.mecanicos.map(function(m){return {v:m,t:m};}), 'Todos los mecánicos');
+  opciones(document.getElementById('f-estado'),
+    [{v:'aprobado',t:'Aprobado'},{v:'pendiente',t:'Pendiente'},{v:'rechazado',t:'Rechazado'},{v:'sin estado',t:'Sin estado'}],
+    'Todos los estados');
+  ['f-fecha','f-usuario','f-mec','f-estado'].forEach(function(id){
+    document.getElementById(id).addEventListener('change',render);
+  });
+  document.getElementById('f-limpiar').addEventListener('click',function(){
+    ['f-fecha','f-usuario','f-mec','f-estado'].forEach(function(id){document.getElementById(id).value='';});
+    render();
+  });
+  render();
+})();
+</script>
+</div>
+</body></html>

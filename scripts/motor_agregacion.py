@@ -299,6 +299,72 @@ def construir_horas_chinagro(df_actual, df_liquidacion_mo):
 
 
 # ---------------------------------------------------------------------------
+# Informe diario "Chinagro vs App" (revision de cargas)
+# ---------------------------------------------------------------------------
+
+def construir_revision_diaria(df, df_liquidacion_mo):
+    """Datos del informe diario que revisa Victor: como se vienen cargando las
+    horas en AppSheet, contra lo que liquida Chinagro.
+
+    Devuelve estructuras PLANAS y deja que el navegador arme la jerarquia
+    (usuario -> mecanico -> dia -> tareas). Se hace asi, y no anidado como en el
+    semanal, porque la pagina tiene filtros por fecha / usuario / mecanico: con
+    listas planas el filtrado en el navegador es directo, con arboles habria que
+    reconstruirlos en cada cambio de filtro.
+
+    A diferencia del semanal, aca NO se filtra por Estado: el informe existe
+    justamente para revisar como se carga, asi que cada tarea viaja con su estado
+    y se marca en pantalla.
+    """
+    tareas, usuarios, fechas = [], {}, set()
+
+    for _, r in df.iterrows():
+        f = r["FechaDT"]
+        if pd.isna(f):
+            continue
+        f = f.date()
+        fechas.add(f)
+        email = r.get("Email")
+        if pd.notna(email) and email not in usuarios:
+            usuarios[email] = {"em": email,
+                               "nm": EMAIL_A_USUARIO.get(email, email),
+                               "col": EMAIL_A_COLOR.get(email, "#888")}
+        cuil = r.get("Cuil")
+        tareas.append({
+            "f": f.isoformat(),
+            "em": email if pd.notna(email) else "",
+            "mec": r["Mecanico"] if pd.notna(r.get("Mecanico")) else "(sin mecánico)",
+            "cu": int(cuil) if pd.notna(cuil) else None,
+            "maq": r["Maquina"] if pd.notna(r.get("Maquina")) else "",
+            "rub": r["Rubro"] if pd.notna(r.get("Rubro")) else "",
+            "sub": r["SubRubro"] if pd.notna(r.get("SubRubro")) else "",
+            "lug": r["Lugar"] if pd.notna(r.get("Lugar")) else "",
+            "tip": r["Tipo"] if pd.notna(r.get("Tipo")) else "",
+            "est": (str(r["Estado"]).strip() if pd.notna(r.get("Estado")) else ""),
+            "hs": r1(r.get("Horas", 0) or 0),
+            "hst": r1(r.get("HorasTraslado", 0) or 0),
+            "hsp": r1(r.get("HorasPrep", 0) or 0),
+        })
+
+    chin = []
+    if df_liquidacion_mo is not None and len(df_liquidacion_mo) and "fecha_tarea" in df_liquidacion_mo.columns:
+        liq = df_liquidacion_mo.copy()
+        liq["hsjornal"] = pd.to_numeric(liq["hsjornal"], errors="coerce").fillna(0.0)
+        liq["_d"] = pd.to_datetime(liq["fecha_tarea"], errors="coerce").dt.date
+        for (cuil, d), hs in liq.dropna(subset=["_d"]).groupby(["Cuil", "_d"])["hsjornal"].sum().items():
+            chin.append({"cu": int(cuil), "f": d.isoformat(), "hs": r1(hs)})
+
+    return {
+        "tareas": tareas,
+        "chin": chin,
+        "usuarios": sorted(usuarios.values(), key=lambda u: u["nm"]),
+        "fechas": [{"f": d.isoformat(), "et": f"{DIAS_CORTOS[d.weekday()]} {d.day:02d}/{d.month:02d}"}
+                   for d in sorted(fechas, reverse=True)],
+        "mecanicos": sorted({t["mec"] for t in tareas}),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Bloque 9: maquinasTop
 # ---------------------------------------------------------------------------
  

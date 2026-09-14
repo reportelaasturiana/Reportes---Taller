@@ -30,6 +30,7 @@ from motor_agregacion import (
     construir_rubros_taller, construir_ausentes_nuevos, construir_estados_lf,
     construir_horas_chinagro, construir_maquinas_top, construir_top_supervisores,
     construir_fluidos, construir_comp_mirar, construir_quincenas, clasificar_fluido,
+    construir_revision_diaria,
     calcular_kpis_taller, generar_nota_pico_horas, generar_nota_lider_supervisores,
     obtener_access_token_service_principal, cargar_desde_power_bi_service,
     parsear_fecha_pbi_service,
@@ -54,6 +55,9 @@ ASSETS_DIR = BASE / "assets"
 
 # Nada anterior a esto se considera una fecha de movimiento valida.
 FECHA_MOV_MINIMA = pd.Timestamp("2015-01-01")
+
+# Dias hacia atras que cubre el informe diario "Chinagro vs App".
+DIAS_REVISION_DIARIA = 30
 
 
 def limpiar_fechas_mov(df, hoy, etiqueta):
@@ -94,6 +98,9 @@ def calcular_fechas(hoy=None):
         "lunes_anterior": lunes_anterior, "domingo_anterior": domingo_anterior,
         "desde_horas": desde_horas,
         "desde_180d": hoy - datetime.timedelta(days=180),
+        # Ventana del informe diario. 30 dias alcanzan para que el filtro de
+        # fecha sea util sin inflar el HTML: son ~4 semanas de tareas.
+        "desde_diario": hoy - datetime.timedelta(days=DIAS_REVISION_DIARIA),
         "desde_anio": datetime.date(hoy.year, 1, 1),
     }
  
@@ -376,7 +383,18 @@ def construir_todo():
         "comp_mirar": comp_mirar, "fluidos": fluidos, "top_supervisores": top_supervisores,
         "generado_en": generado_en,
     }
-    return ctx_taller, ctx_maquinaria
+    # --- Informe diario "Chinagro vs App" (ventana propia, mas larga que la semana) ---
+    df_diario = preparar_horas_df(pbi(dax_horas(f["desde_diario"], f["hoy"])))
+    df_liq_diario = pbi(dax_liquidacion_mo(f["desde_diario"], f["hoy"]))
+    if "fecha_tarea" in df_liq_diario.columns:
+        df_liq_diario["fecha_tarea"] = parsear_fecha_pbi_service(df_liq_diario["fecha_tarea"])
+    ctx_diario = {
+        "datos": construir_revision_diaria(df_diario, df_liq_diario),
+        "generado_en": generado_en,
+        "rango": f"{f['desde_diario'].strftime('%d/%m/%Y')} al {f['hoy'].strftime('%d/%m/%Y')}",
+    }
+
+    return ctx_taller, ctx_maquinaria, ctx_diario
  
  
 def render(nombre_template, contexto, salida):
@@ -406,10 +424,11 @@ def copiar_estaticos():
  
  
 if __name__ == "__main__":
-    ctx_taller, ctx_maquinaria = construir_todo()
+    ctx_taller, ctx_maquinaria, ctx_diario = construir_todo()
     copiar_estaticos()
     render("gestion_taller.html.j2", ctx_taller, "Gestion_Taller.html")
     render("reunion_maquinaria.html.j2", ctx_maquinaria, "Reunion_Semanal_Maquinaria.html")
+    render("revision_diaria.html.j2", ctx_diario, "Chinagro_vs_App.html")
     # Portada con los 2 links. Usa la misma plantilla/paleta que los reportes
     # (Inter + Inter Tight, variables CSS, el lockup del logo) para que no
     # parezca otra cosa. Antes era un HTML de 9 lineas escrito a mano aca.

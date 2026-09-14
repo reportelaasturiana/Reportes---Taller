@@ -2,16 +2,18 @@ name: Generar reportes semanales del taller
 
 on:
   schedule:
-    # Lunes 14:45 UTC = 11:45 hora Argentina (ART, UTC-3 todo el año, no tiene
-    # horario de verano). El formato es "minuto hora dia-mes mes dia-semana" y
-    # "1" en el ultimo campo es lunes.
+    # Todos los dias 08:45 UTC = 05:45 hora Argentina (ART, UTC-3 todo el año).
+    # Se pide antes de las 6 porque los cron de Actions arrancan TARDE, nunca
+    # antes, y los slots en hora exacta son los mas congestionados: el 10/8/2026
+    # una corrida salio 2h37m tarde. Apuntando a 05:45 suele quedar cerca de las
+    # 6, que es cuando Victor revisa las cargas del dia anterior.
     #
-    # El objetivo es tener el reporte cerca del mediodia. Se pide 15 minutos
-    # antes y a propósito NO en hora en punto, porque los cron de GitHub Actions
-    # no son puntuales: se encolan y arrancan cuando hay capacidad, siempre
-    # TARDE, nunca antes, y los slots :00 son los mas congestionados. El
-    # 10/8/2026, con el cron en '0 9 * * 1', la corrida salio 2h37m tarde.
-    - cron: '45 14 * * 1'
+    # Es diario y no semanal a proposito: GitHub Pages publica el SITIO ENTERO en
+    # cada despliegue, asi que un workflow aparte que generara solo el informe
+    # diario borraria los otros dos al publicar. Una sola corrida arma los tres.
+    # El informe semanal no cambia de contenido por correr a diario: siempre
+    # reporta la ultima semana ya cerrada.
+    - cron: '45 8 * * *'
   workflow_dispatch: {}  # permite tambien correrlo a mano desde la pestaña "Actions" de GitHub
 
 permissions:
