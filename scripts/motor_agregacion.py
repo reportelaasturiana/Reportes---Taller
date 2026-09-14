@@ -699,12 +699,18 @@ def construir_ranking_tractoristas(df_campo, empleados=None, dias_reincidencia=4
     empleados = empleados or {}
     out = []
     for cond, g in df.groupby("_cond"):
-        # Reincidencia: mismo par maquina+subrubro repetido en la ventana, pero
-        # SOLO sobre roturas. Un mantenimiento de campaña partido en dos dias
-        # seguidos aparecia como "reincidencia" y no lo es: es la misma tarea
-        # programada, no algo que se volvio a romper.
+        # Reincidencia: mismo par maquina+subrubro repetido en la ventana.
+        #
+        # Se mide sobre TODAS las asistencias y no solo sobre las roturas porque
+        # Tipo_Reparacion viene vacio en campo: de 429 salidas, 427 sin clasificar
+        # (verificado el 14/9/2026). Las 1.641 "Rotura" que tiene el modelo son de
+        # TALLER. Filtrar por rotura dejaba el ranking en 1 sola fila util.
+        #
+        # El subrubro, en cambio, si viene siempre y es descriptivo, asi que el par
+        # maquina+subrubro repetido sigue siendo una señal valida: da igual como se
+        # haya clasificado, hubo que ir dos veces a lo mismo.
         reinc, pares_reinc = 0, []
-        for (maq, sub), gp in g[g["_tipo"] == "rotura"].groupby(["_maq", "_sub"]):
+        for (maq, sub), gp in g.groupby(["_maq", "_sub"]):
             fechas = sorted(gp["FechaDT"].dt.date.unique())
             if len(fechas) < 2:
                 continue
@@ -744,7 +750,10 @@ def construir_ranking_tractoristas(df_campo, empleados=None, dias_reincidencia=4
             "maquinas": maquinas,
         })
 
-    out.sort(key=lambda x: (-x["rot"], -x["reinc"], -x["hs"]))
+    # Ordena por reincidencia: es lo unico que hoy separa "se rompio" de "se lo
+    # rompen". No se puede ordenar por roturas porque Tipo_Reparacion no se carga
+    # en campo. Desempata por asistencias y despues por horas de mecanico.
+    out.sort(key=lambda x: (-x["reinc"], -x["asis"], -x["hs"]))
     return out
 
 
