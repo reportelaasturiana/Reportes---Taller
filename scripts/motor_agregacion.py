@@ -665,16 +665,21 @@ def construir_ranking_tractoristas(df_campo, empleados=None, dias_reincidencia=4
     si. Nadie va a marcar "Negligencia" en la app, y nadie puede esconder que a
     la misma maquina hubo que ir a arreglarle lo mismo cuatro veces.
 
-    Por eso se ordena por ROTURAS y no por asistencias totales: el mantenimiento
-    de campaña es programado y no es culpa de nadie, asi que contarlo castigaria
-    al que mas mantenimiento hace.
+    El detalle se arma POR LO QUE SE REPITIO, no por maquina: agrupado por maquina
+    quedaba una lista larga donde habia que leer 11 filas para descubrir cuales
+    eran las dos que importaban, y aparecian maquinas visitadas una sola vez que
+    solo hacen ruido. Cada repeticion viaja con sus fechas y los dias que pasaron
+    entre una y otra, que es lo que permite distinguir "se rompio de nuevo" de
+    "la rutina de siempre".
 
-    `reinc` cuenta los pares maquina+subrubro que se repitieron dentro de
-    `dias_reincidencia`. Un par que aparece 3 veces suma 2 reincidencias (la
-    primera vez no es reincidir).
+    `reinc` cuenta las repeticiones dentro de `dias_reincidencia` (un par que
+    aparece 3 veces suma 2: la primera vez no es reincidir).
 
-    empleados: dict {cuil: nombre}. El Conductor viene como CUIL; sin esto el
-    ranking mostraria numeros.
+    Se mide sobre TODAS las asistencias y no solo sobre roturas porque
+    Tipo_Reparacion viene vacio en campo: de 429 salidas, 427 sin clasificar
+    (verificado el 14/9/2026). Las "Rotura" del modelo son todas de TALLER.
+
+    empleados: dict {cuil: nombre}. El Conductor viene como CUIL.
     """
     df = df_campo.copy()
     if not len(df):
@@ -683,6 +688,7 @@ def construir_ranking_tractoristas(df_campo, empleados=None, dias_reincidencia=4
     df["FechaDT"] = pd.to_datetime(df.get("Fecha"), errors="coerce")
     for col in ("Horas", "HorasPrep", "HorasTraslado"):
         df[col] = pd.to_numeric(df.get(col), errors="coerce").fillna(0.0)
+    df["_hs"] = df["Horas"] + df["HorasPrep"] + df["HorasTraslado"]
     df["_sub"] = df["SubRubro"].fillna("").astype(str).str.strip()
     df["_maq"] = df["Maquina"].fillna("(sin máquina)").astype(str).str.strip()
     df["_cond"] = df["Conductor"].fillna("").astype(str).str.strip()
@@ -699,60 +705,47 @@ def construir_ranking_tractoristas(df_campo, empleados=None, dias_reincidencia=4
     empleados = empleados or {}
     out = []
     for cond, g in df.groupby("_cond"):
-        # Reincidencia: mismo par maquina+subrubro repetido en la ventana.
-        #
-        # Se mide sobre TODAS las asistencias y no solo sobre las roturas porque
-        # Tipo_Reparacion viene vacio en campo: de 429 salidas, 427 sin clasificar
-        # (verificado el 14/9/2026). Las 1.641 "Rotura" que tiene el modelo son de
-        # TALLER. Filtrar por rotura dejaba el ranking en 1 sola fila util.
-        #
-        # El subrubro, en cambio, si viene siempre y es descriptivo, asi que el par
-        # maquina+subrubro repetido sigue siendo una señal valida: da igual como se
-        # haya clasificado, hubo que ir dos veces a lo mismo.
-        reinc, pares_reinc = 0, []
+        repes, reinc, filas_repetidas = [], 0, 0
         for (maq, sub), gp in g.groupby(["_maq", "_sub"]):
             fechas = sorted(gp["FechaDT"].dt.date.unique())
             if len(fechas) < 2:
                 continue
-            repes = sum(1 for a, b in zip(fechas, fechas[1:])
-                        if (b - a).days <= dias_reincidencia)
-            if repes:
-                reinc += repes
-                pares_reinc.append({"maq": maq, "sub": sub, "veces": len(fechas)})
-
-        maquinas = []
-        for maq, gm in g.groupby("_maq"):
-            items = [{
-                "f": r["FechaDT"].strftime("%d/%m"),
-                "sub": r["_sub"] or "(sin subrubro)",
-                "tipo": r["_tipo"],
-                "mec": r["Mecanico"] if pd.notna(r.get("Mecanico")) else "",
-                "hs": r1(r["Horas"] + r["HorasPrep"] + r["HorasTraslado"]),
-            } for _, r in gm.sort_values("FechaDT", ascending=False).iterrows()]
-            maquinas.append({
-                "maq": maq, "n": len(gm),
-                "rot": int((gm["_tipo"] == "rotura").sum()),
-                "hs": r1((gm["Horas"] + gm["HorasPrep"] + gm["HorasTraslado"]).sum()),
-                "items": items,
+            saltos = [(b - a).days for a, b in zip(fechas, fechas[1:])]
+            cerca = sum(1 for d in saltos if d <= dias_reincidencia)
+            if not cerca:
+                continue
+            reinc += cerca
+            filas_repetidas += len(gp)
+            repes.append({
+                "maq": maq,
+                "sub": sub or "(sin subrubro)",
+                "veces": len(fechas),
+                # fechas y saltos van alineados: saltos[i] son los dias entre
+                # fechas[i] y fechas[i+1], por eso hay uno menos.
+                "fechas": [f.strftime("%d/%m") for f in fechas],
+                "saltos": saltos,
+                "min": min(saltos),
+                "hs": r1(gp["_hs"].sum()),
+                "rot": int((gp["_tipo"] == "rotura").sum()),
             })
-        maquinas.sort(key=lambda m: (-m["rot"], -m["n"]))
+        repes.sort(key=lambda x: (-x["veces"], x["min"]))
 
+        sueltas = g.drop_duplicates(["_maq", "_sub", "FechaDT"])
         out.append({
             "cuil": cond,
             "n": empleados.get(cond, cond),
             "asis": len(g),
-            "rot": int((g["_tipo"] == "rotura").sum()),
-            "mant": int((g["_tipo"] == "mant").sum()),
             "maqs": int(g["_maq"].nunique()),
-            "hs": r1((g["Horas"] + g["HorasPrep"] + g["HorasTraslado"]).sum()),
+            "hs": r1(g["_hs"].sum()),
             "reinc": reinc,
-            "pares": sorted(pares_reinc, key=lambda x: -x["veces"])[:5],
-            "maquinas": maquinas,
+            "repes": repes,
+            # Resumen de lo que NO se repitio: se cuenta, no se lista. Listar
+            # maquinas de una sola visita era el ruido que tapaba la señal.
+            "otras_n": len(g) - filas_repetidas,
+            "otras_maqs": int(g[~g.set_index(["_maq", "_sub"]).index.isin(
+                [(r["maq"], r["sub"]) for r in repes])]["_maq"].nunique()),
         })
 
-    # Ordena por reincidencia: es lo unico que hoy separa "se rompio" de "se lo
-    # rompen". No se puede ordenar por roturas porque Tipo_Reparacion no se carga
-    # en campo. Desempata por asistencias y despues por horas de mecanico.
     out.sort(key=lambda x: (-x["reinc"], -x["asis"], -x["hs"]))
     return out
 

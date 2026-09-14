@@ -584,33 +584,39 @@ function renderTractoristas(){
   }
   let rows='';
   rankingTractoristas.forEach(function(t,i){
-    /* El detalle se agrupa por maquina: es como se discute en la reunion
-       ("a esta maquina le fuimos 4 veces"), no tarea por tarea suelta. */
-    const det=t.maquinas.map(function(m){
-      const items=m.items.map(function(x){
-        const et = x.tipo==='rotura'
-          ? '<span style="color:var(--r);font-weight:700">rotura</span>'
-          : x.tipo==='mant' ? '<span style="color:var(--s2)">mantenim.</span>'
-                            : '<span style="color:var(--s2)">—</span>';
-        return '<tr><td>'+x.f+'</td><td style="font-size:11px;color:var(--s)">'+(x.sub||'—')+
-               '</td><td>'+et+'</td><td style="font-size:11px;color:var(--s)">'+(x.mec||'')+
-               '</td><td class="r">'+nz(x.hs)+' hs</td></tr>';
-      }).join('');
-      return '<div style="margin-bottom:10px">'+
-        '<div style="font-size:11.5px;font-weight:700;margin-bottom:3px">'+m.maq+
-          ' <span style="font-weight:400;color:var(--s)">· '+m.n+' asistencia'+(m.n>1?'s':'')+
-(m.n>1?', <span style="color:var(--r);font-weight:700">repetida</span>':'')+
-          ' · '+nz(m.hs)+' hs</span></div>'+
-        '<div style="overflow-x:auto"><table class="itbl"><thead><tr>'+
-          '<th>Fecha</th><th>Subrubro</th><th>Tipo</th><th>Mecánico</th><th class="r">Hs</th>'+
-        '</tr></thead><tbody>'+items+'</tbody></table></div></div>';
+    /* El detalle va POR LO QUE SE REPITIO, no por maquina: agrupado por maquina
+       habia que leer toda la lista para descubrir cual era la fila que importaba,
+       y aparecian maquinas de una sola visita que solo hacian ruido. */
+    const bloques=t.repes.map(function(r){
+      var cadena='';
+      r.fechas.forEach(function(f,k){
+        if(k){
+          /* Un salto corto es la señal fuerte: volvio a romperse enseguida. */
+          var d=r.saltos[k-1], corto=d<=7;
+          cadena+='<span style="color:'+(corto?'var(--r)':'var(--s2)')+';font-weight:'+(corto?'700':'400')+';font-size:10px;margin:0 3px">–'+d+'d→</span>';
+        }
+        cadena+='<span style="font-weight:600">'+f+'</span>';
+      });
+      return '<div style="padding:7px 0;border-top:1px solid #f0f0f0">'+
+        '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">'+
+          '<span style="font-size:11.5px;font-weight:700">'+r.maq+'</span>'+
+          '<span style="font-size:11.5px;color:var(--r);font-weight:600">'+r.sub+'</span>'+
+          '<span style="font-size:12px;font-weight:800;color:var(--r)">×'+r.veces+'</span>'+
+          '<span style="font-size:10.5px;color:var(--s2);margin-left:auto">'+nz(r.hs)+' hs</span>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--s);margin-top:3px">'+cadena+'</div>'+
+      '</div>';
     }).join('');
 
-    const alerta=t.pares.length
-      ? '<div style="margin-bottom:8px;padding:7px 9px;background:var(--rc);border-left:3px solid var(--r);border-radius:5px;font-size:11px">'+
-        '<strong>🔁 Le volvió a pasar lo mismo:</strong> '+
-        t.pares.map(function(pz){return pz.maq+' · '+pz.sub+' <strong>×'+pz.veces+'</strong>';}).join(' &nbsp;·&nbsp; ')+
-        '</div>' : '';
+    const otras=t.otras_n
+      ? '<div style="margin-top:9px;padding-top:7px;border-top:1px dashed var(--bd);font-size:10.5px;color:var(--s2)">'+
+        'Otras '+t.otras_n+' asistencia'+(t.otras_n>1?'s':'')+' en '+t.otras_maqs+' máquina'+(t.otras_maqs>1?'s':'')+
+        ', ninguna repetida.</div>' : '';
+
+    const cuerpo = t.repes.length
+      ? '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--r);margin-bottom:2px">🔁 Le volvió a pasar lo mismo · los días son lo que tardó en repetirse</div>'+bloques+otras
+      : '<div style="font-size:11px;color:var(--s2);padding:6px 0">Ninguna asistencia se repitió sobre la misma máquina y el mismo subrubro. '+
+        t.asis+' asistencia'+(t.asis>1?'s':'')+' en '+t.maqs+' máquina'+(t.maqs>1?'s':'')+'.</div>';
 
     rows+='<div class="rk-row">'+
       '<div class="rk-hdr" onclick="toggleBody(this)" style="grid-template-columns:'+COLS+'">'+
@@ -621,10 +627,7 @@ function renderTractoristas(){
         '<div class="c" style="text-align:center;color:var(--s)">'+t.maqs+'</div>'+
         '<div class="r" style="text-align:right">'+nz(t.hs)+' hs</div>'+
       '</div>'+
-      '<div class="rk-body">'+alerta+
-        '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--s);margin-bottom:6px">Detalle por máquina · fechas de más reciente a más vieja</div>'+
-        det+
-      '</div>'+
+      '<div class="rk-body">'+cuerpo+'</div>'+
     '</div>';
   });
   const header='<div style="display:grid;grid-template-columns:'+COLS+';gap:8px;padding:0 12px 8px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--s);border-bottom:1px solid var(--bd);margin-bottom:6px">'+
