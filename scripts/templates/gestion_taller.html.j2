@@ -25,7 +25,10 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 /* HDR */
 .hdr{background:#fff;border-bottom:3px solid var(--r);position:sticky;top:0;z-index:300;box-shadow:0 2px 10px rgba(0,0,0,.1)}
 .hdr-in{max-width:1400px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px;flex-shrink:0;
+  text-decoration:none;color:inherit;cursor:pointer;transition:opacity .15s}
+.logo:hover{opacity:.65}
+.logo:focus-visible{outline:2px solid var(--r);outline-offset:3px;border-radius:6px}
 .enm{font-family:'Inter Tight',sans-serif;font-size:19px;font-weight:900;color:var(--r);letter-spacing:-.02em;line-height:1}
 .esb{font-size:10px;color:var(--s);text-transform:uppercase;letter-spacing:.05em}
 .sep{width:1px;height:30px;background:var(--bd);flex-shrink:0}
@@ -310,10 +313,10 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
  
 <header class="hdr">
 <div class="hdr-in">
-  <div class="logo">
+  <a class="logo" href="index.html" title="Volver a la portada">
     <img src="logo.png" alt="La Asturiana" style="width:34px;height:44px;object-fit:contain">
     <div><div class="enm">La Asturiana</div><div class="esb">Servicios Agrícolas</div></div>
-  </div>
+  </a>
   <div class="sep"></div>
   <div class="htit">
     <h1>Reunión de Equipo</h1>

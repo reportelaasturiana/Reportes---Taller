@@ -15,6 +15,11 @@ body{margin:0;background:var(--bg);color:var(--t);font-family:'Inter',-apple-sys
   -webkit-font-smoothing:antialiased;font-size:13px}
 .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 50px}
 header{display:flex;align-items:center;gap:13px}
+/* La marca lleva a la portada, para no depender de la flecha del navegador. */
+header a{display:flex;align-items:center;gap:13px;text-decoration:none;color:inherit;
+  cursor:pointer;transition:opacity .15s}
+header a:hover{opacity:.65}
+header a:focus-visible{outline:2px solid var(--r);outline-offset:3px;border-radius:6px}
 header img{width:34px;height:44px;object-fit:contain}
 .enm{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:17px;letter-spacing:-.02em;line-height:1.1}
 .esb{font-size:11px;color:var(--s)}
@@ -87,8 +92,10 @@ h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-sp
 <div class="wrap">
 
 <header>
-  <img src="logo.png" alt="">
-  <div><div class="enm">La Asturiana</div><div class="esb">Servicios Agrícolas</div></div>
+  <a href="index.html" title="Volver a la portada">
+    <img src="logo.png" alt="La Asturiana">
+    <div><div class="enm">La Asturiana</div><div class="esb">Servicios Agrícolas</div></div>
+  </a>
 </header>
 
 <h1>Chinagro vs App</h1>
