@@ -14,6 +14,7 @@ Power BI real de la empresa antes de escribirse acá (ver
 claude/diseno-automatizacion-html-taller.md, v16, en el proyecto de Claude).
 """
 import datetime
+import json
 import os
 import shutil
 import sys
@@ -33,7 +34,7 @@ from motor_agregacion import (
     construir_revision_diaria, construir_ranking_tractoristas,
     calcular_kpis_taller, generar_nota_pico_horas, generar_nota_lider_supervisores,
     obtener_access_token_service_principal, cargar_desde_power_bi_service,
-    parsear_fecha_pbi_service,
+    parsear_fecha_pbi_service, r1,
 )
 from formato import fnum, datos_semana, MESES_LARGO
  
@@ -61,6 +62,9 @@ DIAS_REVISION_DIARIA = 30
 
 # Dias hacia atras del ranking de tractoristas de "Asistencias a campo".
 DIAS_RANKING_TRACTORISTAS = 90
+
+# Desde cuando se arma el historico mensual de docs/historico.json.
+HISTORICO_DESDE = datetime.date(2025, 8, 1)
 
 
 def limpiar_fechas_mov(df, hoy, etiqueta):
@@ -146,6 +150,64 @@ SELECTCOLUMNS(
 """
  
  
+def dax_historico_mecanico(desde, hasta):
+    """Horas por mecanico y MES, separadas en taller y campo.
+
+    Alimenta docs/historico.json, que es lo que consume el artifact de Gestion
+    del Taller para poder mirar hacia atras. Se agrega por mes en el servidor y
+    no se bajan las filas sueltas: son ~33.000 y el archivo quedaria inusable.
+
+    El mes sale de 'Calendario' y no de YEAR()/MONTH() sobre la fecha: agrupar
+    por una expresion calculada dentro de SUMMARIZECOLUMNS devuelve 400.
+    """
+    return f"""
+EVALUATE
+SELECTCOLUMNS(
+    SUMMARIZECOLUMNS(
+        'Horas_Personal_AppSheet'[Mecánico],
+        'Calendario'[Año],
+        'Calendario'[NMes],
+        FILTER(ALL('Horas_Personal_AppSheet'[Fecha]),
+            'Horas_Personal_AppSheet'[Fecha] >= {_d(desde)} &&
+            'Horas_Personal_AppSheet'[Fecha] <= {_d(hasta)}),
+        "taller", CALCULATE(SUM('Horas_Personal_AppSheet'[Horas]),
+            FILTER(ALL('Horas_Personal_AppSheet'[Lugar]),
+                LEFT('Horas_Personal_AppSheet'[Lugar],6) = "TALLER")),
+        "campo", CALCULATE(SUM('Horas_Personal_AppSheet'[Horas]),
+            FILTER(ALL('Horas_Personal_AppSheet'[Lugar]),
+                LEFT('Horas_Personal_AppSheet'[Lugar],5) = "CAMPO"))
+    ),
+    "mec", 'Horas_Personal_AppSheet'[Mecánico],
+    "anio", 'Calendario'[Año],
+    "mes", 'Calendario'[NMes],
+    "taller", [taller],
+    "campo", [campo]
+)
+"""
+
+
+def dax_historico_rubro(desde, hasta):
+    """Horas por rubro y mes, solo taller, para ver en que se va el tiempo."""
+    return f"""
+EVALUATE
+SELECTCOLUMNS(
+    SUMMARIZECOLUMNS(
+        'Horas_Personal_AppSheet'[Rubro],
+        'Calendario'[Año],
+        'Calendario'[NMes],
+        FILTER(ALL('Horas_Personal_AppSheet'[Fecha]),
+            'Horas_Personal_AppSheet'[Fecha] >= {_d(desde)} &&
+            'Horas_Personal_AppSheet'[Fecha] <= {_d(hasta)}),
+        "hs", SUM('Horas_Personal_AppSheet'[Horas])
+    ),
+    "rubro", 'Horas_Personal_AppSheet'[Rubro],
+    "anio", 'Calendario'[Año],
+    "mes", 'Calendario'[NMes],
+    "hs", [hs]
+)
+"""
+
+
 def dax_campo_conductores(desde, hasta):
     """Salidas a CAMPO con el conductor de la maquina, para el ranking de
     tractoristas. Va aparte de dax_horas y no como columnas extra de aquella
@@ -453,6 +515,36 @@ def construir_todo():
         "dias_ranking": DIAS_RANKING_TRACTORISTAS,
         "generado_en": generado_en,
     }
+    # --- Historico mensual para el artifact de Gestion del Taller ---
+    def _mensual(df, clave, campos):
+        """Las filas traen anio/mes por separado y los nulos de DAX como NaN."""
+        out = []
+        for _, r in df.iterrows():
+            nombre = r.get(clave)
+            if pd.isna(nombre) or not str(nombre).strip():
+                continue
+            fila = {"n": str(nombre).strip(),
+                    "ym": f"{int(r['anio']):04d}-{int(r['mes']):02d}"}
+            for c in campos:
+                v = pd.to_numeric(r.get(c), errors="coerce")
+                fila[c] = r1(0.0 if pd.isna(v) else float(v))
+            out.append(fila)
+        return out
+
+    df_hm = pbi(dax_historico_mecanico(HISTORICO_DESDE, f["hoy"]))
+    df_hr = pbi(dax_historico_rubro(HISTORICO_DESDE, f["hoy"]))
+    historico = {
+        "desde": HISTORICO_DESDE.isoformat(),
+        "hasta": f["hoy"].isoformat(),
+        "generado_en": generado_en,
+        "semana": {"numero": sem["numero"], "rango": sem["rango_largo"]},
+        "mecanicos": _mensual(df_hm, "mec", ["taller", "campo"]),
+        "rubros": _mensual(df_hr, "rubro", ["hs"]),
+    }
+    historico["meses"] = sorted({x["ym"] for x in historico["mecanicos"]})
+    print(f"  historico: {len(historico['mecanicos'])} filas mecanico-mes, "
+          f"{len(historico['rubros'])} rubro-mes, {len(historico['meses'])} meses")
+
     # --- Informe diario "Chinagro vs App" (ventana propia, mas larga que la semana) ---
     df_diario = preparar_horas_df(pbi(dax_horas(f["desde_diario"], f["hoy"])))
     df_liq_diario = pbi(dax_liquidacion_mo(f["desde_diario"], f["hoy"]))
@@ -464,7 +556,7 @@ def construir_todo():
         "rango": f"{f['desde_diario'].strftime('%d/%m/%Y')} al {f['hoy'].strftime('%d/%m/%Y')}",
     }
 
-    return ctx_taller, ctx_maquinaria, ctx_diario
+    return ctx_taller, ctx_maquinaria, ctx_diario, historico
  
  
 def render(nombre_template, contexto, salida):
@@ -494,7 +586,7 @@ def copiar_estaticos():
  
  
 if __name__ == "__main__":
-    ctx_taller, ctx_maquinaria, ctx_diario = construir_todo()
+    ctx_taller, ctx_maquinaria, ctx_diario, historico = construir_todo()
     copiar_estaticos()
     render("gestion_taller.html.j2", ctx_taller, "Gestion_Taller.html")
     render("reunion_maquinaria.html.j2", ctx_maquinaria, "Reunion_Semanal_Maquinaria.html")
@@ -505,3 +597,9 @@ if __name__ == "__main__":
     render("index.html.j2",
            {"sem": ctx_taller["sem"], "generado_en": ctx_taller["generado_en"]},
            "index.html")
+    # Archivo de datos aparte, no una pagina: lo consume el artifact de Gestion
+    # del Taller, que necesita mirar meses hacia atras y no solo la semana.
+    ruta = OUTPUT_DIR / "historico.json"
+    ruta.write_text(json.dumps(historico, ensure_ascii=False, separators=(",", ":")),
+                    encoding="utf-8")
+    print(f"Generado: historico.json ({ruta.stat().st_size // 1024} KB)")
