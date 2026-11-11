@@ -85,9 +85,9 @@ h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-sp
 </header>
 
 <h1>La Falda vs App</h1>
-<p class="sub">Máquinas que <strong>recibieron repuestos</strong> y a las que el taller
-<strong>no les cargó ninguna hora</strong> en el mismo período. Es la verificación
-«Repuestos sin horas del taller» del Preliquidador, corriendo sobre todas las máquinas.</p>
+<p class="sub"><strong>Maquinaria de terceros</strong> que recibió repuestos y a la que el taller
+<strong>no le cargó ninguna hora</strong> en el mismo período. Es la verificación
+«Repuestos sin horas del taller» del Preliquidador.</p>
 <p class="upd">🕒 Actualizado: {{ generado_en }} · Período: {{ rango }}</p>
 
 <div class="card">
@@ -97,6 +97,9 @@ h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-sp
     <strong>Esto no es un error en sí mismo: es algo para preguntar.</strong>
     Si el repuesto se usó, faltan las horas del taller. Si no se usó, se le está imputando
     un repuesto de más a esa máquina.<br>
+    <strong>Solo maquinaria de terceros</strong>: ahí el repuesto se le descuenta a alguien.
+    En una máquina propia el mismo hueco es prolijidad de carga, y los cajones genéricos
+    («frente de pulverizada», «maquinaria de ...») llenaban la lista sin aportar.<br>
     Se cruza por el <strong>id de máquina</strong>, que es el mismo en los dos sistemas porque el
     maestro del taller se pega del de compras. Las horas cuentan <strong>aprobadas y pendientes</strong>;
     las rechazadas no llegan. Las <strong>reparaciones de afuera</strong> no cuentan como repuesto
@@ -110,7 +113,6 @@ h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-sp
     <div class="fg"><label for="f-buscar">Buscar máquina o repuesto</label>
       <input type="search" id="f-buscar" placeholder="ej: tractor 62, manguera" autocomplete="off"></div>
     <div class="fg"><label for="f-tipo">Tipo de maquinaria</label><select id="f-tipo"></select></div>
-    <div class="fg"><label for="f-prop">Propiedad</label><select id="f-prop"></select></div>
     <div class="fg"><label for="f-orden">Ordenar por</label><select id="f-orden">
       <option value="imp">Importe, de mayor a menor</option>
       <option value="n">Cantidad de repuestos</option>
@@ -139,17 +141,17 @@ function kpis(){
     ['Con repuestos', r.maquinas_con_repuestos, false],
     ['Con horas cargadas', r.maquinas_con_horas, false],
     ['Importe sin horas', '$' + f0(r.importe_sin_horas), true],
-    ['Reparaciones de afuera', r.repuestos_de_afuera, false]
+    ['Reparaciones de afuera', r.repuestos_de_afuera, false],
+    ['Propias no contadas', r.propias_excluidas, false]
   ].map(x => '<div class="kpi' + (x[2] ? ' alerta' : '') + '"><div class="k">' + x[0] +
     '</div><div class="v">' + x[1] + '</div></div>').join('');
 }
 
 function visibles(){
   const q = $('f-buscar').value.trim().toLowerCase();
-  const tipo = $('f-tipo').value, prop = $('f-prop').value;
+  const tipo = $('f-tipo').value;
   let cs = D.casos.filter(c => {
     if(tipo && c.tipo !== tipo) return false;
-    if(prop && (c.propiedad || '(sin dato)') !== prop) return false;
     if(q){
       /* La búsqueda mira también los repuestos: muchas veces se llega al caso
          por el repuesto que apareció, no por la máquina. */
@@ -211,15 +213,12 @@ document.addEventListener('click', function(e){
 (function init(){
   kpis();
   const tipos = [...new Set(D.casos.map(c => c.tipo).filter(Boolean))].sort();
-  const props = [...new Set(D.casos.map(c => c.propiedad || '(sin dato)'))].sort();
   $('f-tipo').innerHTML = '<option value="">Todos los tipos</option>' +
     tipos.map(t => '<option value="' + t + '">' + t + '</option>').join('');
-  $('f-prop').innerHTML = '<option value="">Propias y de terceros</option>' +
-    props.map(p => '<option value="' + p + '">' + p + '</option>').join('');
-  ['f-buscar','f-tipo','f-prop','f-orden'].forEach(id =>
+  ['f-buscar','f-tipo','f-orden'].forEach(id =>
     $(id).addEventListener('input', pintar));
   $('f-limpiar').addEventListener('click', function(){
-    ['f-buscar','f-tipo','f-prop'].forEach(id => { $(id).value = ''; });
+    ['f-buscar','f-tipo'].forEach(id => { $(id).value = ''; });
     $('f-orden').value = 'imp';
     pintar();
   });

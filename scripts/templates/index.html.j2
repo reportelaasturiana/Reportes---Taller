@@ -64,7 +64,9 @@ h1 .rojo{color:var(--rojo)}
 .centro{position:relative;z-index:5;flex:1;display:flex;align-items:center;justify-content:center;
   padding:24px 0 clamp(70px,18vh,190px)}
 .fila{display:flex;gap:16px;width:100%;max-width:1060px;flex-wrap:wrap}
-.tarjeta{position:relative;flex:1 1 300px;display:flex;align-items:center;gap:14px;
+/* 228 y no 300: con 4 tarjetas de 300 no entran en los 1060 de la fila,
+   se iban a dos lineas y la ultima quedaba estirada a lo ancho. */
+.tarjeta{position:relative;flex:1 1 228px;display:flex;align-items:center;gap:14px;
   background:var(--blanco);border:1px solid var(--linea);border-radius:14px;
   padding:17px 20px;text-decoration:none;color:var(--tinta);overflow:hidden;
   box-shadow:0 1px 3px rgba(107,15,8,.05),0 8px 24px rgba(107,15,8,.05);

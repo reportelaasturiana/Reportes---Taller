@@ -762,7 +762,7 @@ def _es_de_afuera(valor):
     return str(valor or "").strip().upper() == "S"
 
 
-def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None):
+def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None, solo_terceros=True):
     """Maquinas que recibieron repuestos y a las que el taller no les cargo
     ninguna hora, en el mismo periodo.
 
@@ -780,6 +780,16 @@ def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None):
     No es un error en si mismo, y por eso el informe lo presenta como algo para
     preguntar: si el repuesto se uso, faltan las horas; si no se uso, se le esta
     imputando un repuesto de mas.
+
+    `solo_terceros` deja solo la maquinaria de terceros, que es donde el caso
+    cuesta plata: ahi el repuesto se le descuenta a alguien. En una maquina
+    propia el mismo hueco es prolijidad de carga. Tambien saca de encima los
+    cajones genericos ("frente de pulverizada X", "maquinaria <persona>"), que
+    estan marcados como propios y llenaban la lista.
+
+    Una maquina sin propiedad en el maestro NO se cuenta como tercero, pero se
+    informa aparte: si fueran muchas, el filtro estaria tapando casos reales en
+    vez de limpiarlos.
     """
     if df_repuestos is None or not len(df_repuestos):
         return {"casos": [], "resumen": {}}
@@ -806,10 +816,18 @@ def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None):
             if pd.notna(idm):
                 prop[int(idm)] = str(r.get("propiedad") or "").strip()
 
-    casos = []
+    casos, fuera_propias, sin_propiedad = [], 0, 0
     for idm, g in rep_propias.groupby("id_maquina"):
         if int(idm) in con_horas:
             continue
+        if solo_terceros:
+            p = prop.get(int(idm), "")
+            if not p:
+                sin_propiedad += 1
+                continue
+            if not p.upper().startswith("TERCERO"):
+                fuera_propias += 1
+                continue
         g = g.sort_values("_fecha", ascending=False)
         items = [{
             "f": r["_fecha"].strftime("%d/%m"),
@@ -843,6 +861,9 @@ def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None):
             "importe_sin_horas": r1(sum(c["imp"] for c in casos)),
             "repuestos_de_afuera": int(de_afuera.sum()),
             "filas_repuestos": int(len(rep)),
+            "solo_terceros": bool(solo_terceros),
+            "propias_excluidas": fuera_propias,
+            "sin_propiedad_excluidas": sin_propiedad,
         },
     }
 
