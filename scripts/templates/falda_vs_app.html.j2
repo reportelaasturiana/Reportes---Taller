@@ -1,0 +1,229 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>La Falda vs App · Repuestos sin horas del taller</title>
+<link rel="icon" href="logo.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800;900&display=swap');
+:root{
+  --r:#c0392b;--rc:#fdecea;--v:#4a7c2f;--vc:#eaf3de;--a:#e65100;--ac:#fff3e0;
+  --b:#1565c0;--t:#1a1a1a;--s:#555;--s2:#999;--bd:#e2e2e2;--bg:#f2f2f2;--w:#fff;
+  --sh:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t);font-family:'Inter',-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;font-size:13px}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 50px}
+header{display:flex;align-items:center;gap:13px}
+header a{display:flex;align-items:center;gap:13px;text-decoration:none;color:inherit;
+  cursor:pointer;transition:opacity .15s}
+header a:hover{opacity:.65}
+header a:focus-visible{outline:2px solid var(--r);outline-offset:3px;border-radius:6px}
+header img{width:34px;height:44px;object-fit:contain}
+.enm{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:17px;letter-spacing:-.02em;line-height:1.1}
+.esb{font-size:11px;color:var(--s)}
+h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-spacing:-.02em;margin:14px 0 4px}
+.sub{color:var(--s);font-size:12.5px;line-height:1.55;margin:0 0 4px;max-width:70ch}
+.upd{color:var(--s2);font-size:11px;margin-bottom:16px}
+.card{background:var(--w);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh);
+  padding:14px 16px;margin-bottom:14px}
+.ctit{font-family:'Inter Tight',sans-serif;font-weight:800;font-size:15px;margin-bottom:10px}
+.nota{background:var(--ac);border-left:3px solid var(--a);padding:9px 11px;border-radius:6px;
+  font-size:12px;line-height:1.6;color:var(--s)}
+.nota strong{color:var(--t)}
+.kpis{display:flex;flex-wrap:wrap;gap:10px}
+.kpi{flex:1 1 130px;background:var(--bg);border-radius:9px;padding:9px 11px}
+.kpi .k{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s2)}
+.kpi .v{font-size:20px;font-weight:800;font-family:'Inter Tight',sans-serif;margin-top:2px;
+  font-variant-numeric:tabular-nums}
+.kpi.alerta .v{color:var(--r)}
+.filtros{display:flex;flex-wrap:wrap;gap:7px;align-items:flex-end;margin-bottom:4px}
+.fg{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fg label{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s2)}
+.fg select,.fg input{font-family:inherit;font-size:11.5px;padding:6px 8px;border:1px solid var(--bd);
+  border-radius:7px;background:var(--w);color:var(--t);min-width:130px}
+.fg select:focus-visible,.fg input:focus-visible{outline:2px solid var(--b);outline-offset:1px}
+.btn{font-family:inherit;font-size:11.5px;font-weight:600;padding:6px 12px;border:1px solid var(--bd);
+  border-radius:7px;background:var(--w);cursor:pointer;color:var(--s)}
+.btn:hover{background:var(--bg)}
+.fila{display:flex;align-items:center;gap:8px;padding:8px 4px;cursor:pointer;width:100%;
+  background:none;border:0;border-top:1px solid var(--bd);color:inherit;font:inherit;text-align:left}
+.fila:hover{background:#fafafa}
+.arr{color:var(--s2);font-size:9px;width:10px;flex:none}
+.nom{flex:1;min-width:150px}
+.nom b{font-weight:700;font-size:12.5px}
+.meta{font-size:10.5px;color:var(--s2)}
+.n{min-width:62px;text-align:right;font-variant-numeric:tabular-nums}
+.th{font-size:8.5px;font-weight:700;text-transform:uppercase;color:var(--s2);letter-spacing:.05em}
+.bdg{font-size:8.5px;font-weight:700;padding:1px 7px;border-radius:20px;white-space:nowrap}
+.b-ter{background:var(--rc);color:var(--r)}
+.b-pro{background:var(--bg);color:var(--s2)}
+.det{padding:4px 0 10px 22px}
+.itbl{width:100%;border-collapse:collapse;font-size:11px}
+.itbl th{text-align:left;padding:4px 8px;border-bottom:1px solid var(--bd);
+  font-size:8.5px;font-weight:700;text-transform:uppercase;color:var(--s2);white-space:nowrap}
+.itbl td{padding:4px 8px;border-bottom:1px dotted #eee;color:var(--s)}
+.itbl td.num{text-align:right;font-variant-numeric:tabular-nums}
+.oculto{display:none}
+.vacio{padding:26px;text-align:center;color:var(--s2)}
+.desb{overflow-x:auto}
+@media(max-width:720px){
+  .wrap{padding:14px 10px 40px}
+  .n{min-width:52px}
+  .det{padding-left:10px}
+  .nom{min-width:110px}
+}
+</style></head>
+<body>
+<div class="wrap">
+
+<header>
+  <a href="index.html" title="Volver a la portada">
+    <img src="logo.png" alt="La Asturiana">
+    <div><div class="enm">La Asturiana</div><div class="esb">Servicios Agrícolas</div></div>
+  </a>
+</header>
+
+<h1>La Falda vs App</h1>
+<p class="sub">Máquinas que <strong>recibieron repuestos</strong> y a las que el taller
+<strong>no les cargó ninguna hora</strong> en el mismo período. Es la verificación
+«Repuestos sin horas del taller» del Preliquidador, corriendo sobre todas las máquinas.</p>
+<p class="upd">🕒 Actualizado: {{ generado_en }} · Período: {{ rango }}</p>
+
+<div class="card">
+  <div class="ctit">📊 Resumen del período</div>
+  <div class="kpis" id="kpis"></div>
+  <div class="nota" style="margin-top:12px">
+    <strong>Esto no es un error en sí mismo: es algo para preguntar.</strong>
+    Si el repuesto se usó, faltan las horas del taller. Si no se usó, se le está imputando
+    un repuesto de más a esa máquina.<br>
+    Se cruza por el <strong>id de máquina</strong>, que es el mismo en los dos sistemas porque el
+    maestro del taller se pega del de compras. Las horas cuentan <strong>aprobadas y pendientes</strong>;
+    las rechazadas no llegan. Las <strong>reparaciones de afuera</strong> no cuentan como repuesto
+    recibido: las hizo otro taller, y el propio no tenía por qué cargarles horas.
+  </div>
+</div>
+
+<div class="card">
+  <div class="ctit">🔎 Filtros</div>
+  <div class="filtros">
+    <div class="fg"><label for="f-buscar">Buscar máquina o repuesto</label>
+      <input type="search" id="f-buscar" placeholder="ej: tractor 62, manguera" autocomplete="off"></div>
+    <div class="fg"><label for="f-tipo">Tipo de maquinaria</label><select id="f-tipo"></select></div>
+    <div class="fg"><label for="f-prop">Propiedad</label><select id="f-prop"></select></div>
+    <div class="fg"><label for="f-orden">Ordenar por</label><select id="f-orden">
+      <option value="imp">Importe, de mayor a menor</option>
+      <option value="n">Cantidad de repuestos</option>
+      <option value="maq">Nombre de máquina</option>
+    </select></div>
+    <button class="btn" id="f-limpiar" type="button">Limpiar</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ctit">🔧 Máquinas con repuestos y sin horas</div>
+  <div class="desb"><div id="lista"></div></div>
+</div>
+
+</div>
+
+<script>
+const D = {{ datos|tojson }};
+const f0 = n => Math.round(n).toLocaleString('es-AR');
+const $ = id => document.getElementById(id);
+
+function kpis(){
+  const r = D.resumen;
+  $('kpis').innerHTML = [
+    ['Sin horas', r.sin_horas, true],
+    ['Con repuestos', r.maquinas_con_repuestos, false],
+    ['Con horas cargadas', r.maquinas_con_horas, false],
+    ['Importe sin horas', '$' + f0(r.importe_sin_horas), true],
+    ['Reparaciones de afuera', r.repuestos_de_afuera, false]
+  ].map(x => '<div class="kpi' + (x[2] ? ' alerta' : '') + '"><div class="k">' + x[0] +
+    '</div><div class="v">' + x[1] + '</div></div>').join('');
+}
+
+function visibles(){
+  const q = $('f-buscar').value.trim().toLowerCase();
+  const tipo = $('f-tipo').value, prop = $('f-prop').value;
+  let cs = D.casos.filter(c => {
+    if(tipo && c.tipo !== tipo) return false;
+    if(prop && (c.propiedad || '(sin dato)') !== prop) return false;
+    if(q){
+      /* La búsqueda mira también los repuestos: muchas veces se llega al caso
+         por el repuesto que apareció, no por la máquina. */
+      const enMaq = c.maq.toLowerCase().includes(q);
+      const enRep = c.items.some(i => (i.rep + ' ' + i.rub).toLowerCase().includes(q));
+      if(!enMaq && !enRep) return false;
+    }
+    return true;
+  });
+  const o = $('f-orden').value;
+  if(o === 'n') cs = cs.slice().sort((a,b) => b.n - a.n || b.imp - a.imp);
+  else if(o === 'maq') cs = cs.slice().sort((a,b) => a.maq.localeCompare(b.maq));
+  return cs;
+}
+
+function pintar(){
+  const cs = visibles();
+  if(!cs.length){
+    $('lista').innerHTML = '<p class="vacio">No hay máquinas con estos filtros.</p>';
+    return;
+  }
+  $('lista').innerHTML =
+    '<div class="fila" style="cursor:default;border-top:0">' +
+      '<span class="arr"></span><span class="nom th">Máquina</span>' +
+      '<span class="n th">Repuestos</span><span class="n th">Importe</span>' +
+      '<span class="n th">Último</span></div>' +
+    cs.map(function(c,i){
+      const prop = c.propiedad
+        ? '<span class="bdg ' + (c.propiedad.toUpperCase().indexOf('TERCERO') === 0 ? 'b-ter' : 'b-pro') +
+          '">' + c.propiedad.toLowerCase() + '</span>'
+        : '';
+      const items = c.items.map(it =>
+        '<tr><td>' + it.f + '</td><td>' + it.rep + '</td><td>' + (it.rub || '—') +
+        '</td><td class="num">' + (it.cant || '') + '</td><td class="num">$' + f0(it.imp) + '</td></tr>').join('');
+      return '<div><button class="fila" type="button" aria-expanded="false" data-abre="c' + i + '">' +
+        '<span class="arr" id="c' + i + '-a">&#9656;</span>' +
+        '<span class="nom"><b>' + c.maq + '</b> ' + prop +
+          '<br><span class="meta">' + (c.tipo || 'sin tipo') + '</span></span>' +
+        '<span class="n" style="font-weight:700">' + c.n + '</span>' +
+        '<span class="n" style="font-weight:800;color:var(--r)">$' + f0(c.imp) + '</span>' +
+        '<span class="n" style="color:var(--s)">' + c.ultima + '</span>' +
+      '</button><div id="c' + i + '" class="det oculto"><div class="desb"><table class="itbl">' +
+        '<thead><tr><th>Fecha</th><th>Repuesto</th><th>Rubro</th>' +
+        '<th class="num">Cant.</th><th class="num">Importe</th></tr></thead>' +
+        '<tbody>' + items + '</tbody></table></div></div></div>';
+    }).join('');
+}
+
+document.addEventListener('click', function(e){
+  const b = e.target.closest('[data-abre]');
+  if(!b) return;
+  const caja = $(b.dataset.abre), fl = $(b.dataset.abre + '-a');
+  if(!caja) return;
+  const cerrado = caja.classList.toggle('oculto');
+  b.setAttribute('aria-expanded', String(!cerrado));
+  if(fl) fl.innerHTML = cerrado ? '&#9656;' : '&#9662;';
+});
+
+(function init(){
+  kpis();
+  const tipos = [...new Set(D.casos.map(c => c.tipo).filter(Boolean))].sort();
+  const props = [...new Set(D.casos.map(c => c.propiedad || '(sin dato)'))].sort();
+  $('f-tipo').innerHTML = '<option value="">Todos los tipos</option>' +
+    tipos.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+  $('f-prop').innerHTML = '<option value="">Propias y de terceros</option>' +
+    props.map(p => '<option value="' + p + '">' + p + '</option>').join('');
+  ['f-buscar','f-tipo','f-prop','f-orden'].forEach(id =>
+    $(id).addEventListener('input', pintar));
+  $('f-limpiar').addEventListener('click', function(){
+    ['f-buscar','f-tipo','f-prop'].forEach(id => { $(id).value = ''; });
+    $('f-orden').value = 'imp';
+    pintar();
+  });
+  pintar();
+})();
+</script>
+</body></html>

@@ -751,6 +751,103 @@ def construir_ranking_tractoristas(df_campo, empleados=None, dias_reincidencia=4
 
 
 # ---------------------------------------------------------------------------
+# "La Falda vs App": repuestos sin horas del taller
+# ---------------------------------------------------------------------------
+
+def _es_de_afuera(valor):
+    """Una reparacion hecha por un taller externo.
+
+    Llega con los repuestos pero no salio de La Falda como tal, asi que el
+    taller propio no tenia por que cargarle horas: no es un caso."""
+    return str(valor or "").strip().upper() == "S"
+
+
+def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None):
+    """Maquinas que recibieron repuestos y a las que el taller no les cargo
+    ninguna hora, en el mismo periodo.
+
+    Replica la verificacion «Repuestos sin horas del taller» del Preliquidador
+    (app/modulos/terceros/services/verificaciones_service.py), con sus mismas
+    tres reglas:
+
+      1. El cruce va por id_maquina, que es el mismo en La Falda y en la app del
+         taller porque el maestro del taller se pega del de compras. Un repuesto
+         sin id no se cruza: por nombre no se resuelve.
+      2. Las horas cuentan aprobadas Y pendientes. Las rechazadas no llegan.
+      3. Una reparacion de afuera (reparacion = "S") no cuenta como repuesto
+         recibido: la hizo otro taller.
+
+    No es un error en si mismo, y por eso el informe lo presenta como algo para
+    preguntar: si el repuesto se uso, faltan las horas; si no se uso, se le esta
+    imputando un repuesto de mas.
+    """
+    if df_repuestos is None or not len(df_repuestos):
+        return {"casos": [], "resumen": {}}
+
+    rep = df_repuestos.copy()
+    rep["id_maquina"] = pd.to_numeric(rep["id_maquina"], errors="coerce").astype("Int64")
+    rep["_fecha"] = pd.to_datetime(rep["fecha"], errors="coerce")
+    for c in ("cantidad", "importe"):
+        rep[c] = pd.to_numeric(rep.get(c), errors="coerce").fillna(0.0)
+    rep = rep[rep["id_maquina"].notna() & rep["_fecha"].notna()]
+
+    de_afuera = rep["reparacion"].map(_es_de_afuera)
+    rep_propias = rep[~de_afuera]
+
+    con_horas = set()
+    if df_horas is not None and len(df_horas):
+        ids = pd.to_numeric(df_horas["id_maquina"], errors="coerce").astype("Int64")
+        con_horas = set(ids.dropna().tolist())
+
+    prop = {}
+    if propiedad is not None and len(propiedad):
+        for _, r in propiedad.iterrows():
+            idm = pd.to_numeric(r.get("id_maquina"), errors="coerce")
+            if pd.notna(idm):
+                prop[int(idm)] = str(r.get("propiedad") or "").strip()
+
+    casos = []
+    for idm, g in rep_propias.groupby("id_maquina"):
+        if int(idm) in con_horas:
+            continue
+        g = g.sort_values("_fecha", ascending=False)
+        items = [{
+            "f": r["_fecha"].strftime("%d/%m"),
+            "rep": str(r["repuesto"]) if pd.notna(r.get("repuesto")) else "(sin nombre)",
+            "rub": str(r["rubro"]) if pd.notna(r.get("rubro")) else "",
+            "cant": r1(r["cantidad"]),
+            "imp": r1(r["importe"]),
+        } for _, r in g.iterrows()]
+        casos.append({
+            "id": int(idm),
+            "maq": str(g["maquina"].dropna().iloc[0]) if g["maquina"].notna().any() else f"(id {int(idm)})",
+            "tipo": str(g["tipo_maquina"].dropna().iloc[0]) if g["tipo_maquina"].notna().any() else "",
+            "propiedad": prop.get(int(idm), ""),
+            "n": len(g),
+            "imp": r1(g["importe"].sum()),
+            "ultima": g["_fecha"].max().strftime("%d/%m"),
+            "items": items,
+        })
+
+    # Primero lo que mas cuesta: un repuesto caro sin horas es el caso que
+    # conviene mirar antes.
+    casos.sort(key=lambda c: (-c["imp"], -c["n"]))
+
+    maquinas_con_rep = int(rep_propias["id_maquina"].nunique())
+    return {
+        "casos": casos,
+        "resumen": {
+            "maquinas_con_repuestos": maquinas_con_rep,
+            "maquinas_con_horas": len(con_horas),
+            "sin_horas": len(casos),
+            "importe_sin_horas": r1(sum(c["imp"] for c in casos)),
+            "repuestos_de_afuera": int(de_afuera.sum()),
+            "filas_repuestos": int(len(rep)),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
 # Bloque 1: quincenas (requiere histórico año en curso — extracto aparte)
 # ---------------------------------------------------------------------------
  

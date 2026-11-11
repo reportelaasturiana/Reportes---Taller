@@ -32,6 +32,7 @@ from motor_agregacion import (
     construir_horas_chinagro, construir_maquinas_top, construir_top_supervisores,
     construir_fluidos, construir_comp_mirar, construir_quincenas, clasificar_fluido,
     construir_revision_diaria, construir_ranking_tractoristas,
+    construir_falda_vs_app,
     calcular_kpis_taller, generar_nota_pico_horas, generar_nota_lider_supervisores,
     obtener_access_token_service_principal, cargar_desde_power_bi_service,
     parsear_fecha_pbi_service, r1,
@@ -65,6 +66,11 @@ DIAS_RANKING_TRACTORISTAS = 90
 
 # Desde cuando se arma el historico mensual de docs/historico.json.
 HISTORICO_DESDE = datetime.date(2025, 8, 1)
+
+# Ventana del informe "La Falda vs App" (repuestos sin horas del taller).
+# 30 dias: menos que eso y una carga de horas que llega tarde aparece como
+# falso positivo; mas, y el caso ya esta frio cuando alguien lo mira.
+DIAS_FALDA_VS_APP = 30
 
 
 def limpiar_fechas_mov(df, hoy, etiqueta):
@@ -111,6 +117,7 @@ def calcular_fechas(hoy=None):
         # El ranking de tractoristas necesita varias semanas: con una sola, un
         # conductor aparece 1 o 2 veces y la reincidencia no se distingue del ruido.
         "desde_conductores": hoy - datetime.timedelta(days=DIAS_RANKING_TRACTORISTAS),
+        "desde_falda": hoy - datetime.timedelta(days=DIAS_FALDA_VS_APP),
         "desde_anio": datetime.date(hoy.year, 1, 1),
     }
  
@@ -150,6 +157,77 @@ SELECTCOLUMNS(
 """
  
  
+def dax_repuestos_periodo(desde, hasta):
+    """Repuestos imputados a una maquina en el periodo, con su detalle.
+
+    Alimenta el informe "La Falda vs App", que replica la verificacion
+    «Repuestos sin horas del taller» del Preliquidador: una maquina que recibio
+    repuestos y a la que el taller no le cargo ninguna hora.
+
+    Se traen TODAS las filas con id_maquina y el cruce se hace despues en
+    pandas. Hacer el EXCEPT en DAX y volver a pedir el detalle de las que
+    quedan es mas enroscado y no se puede probar sin credenciales.
+
+    Se filtran las de id_maquina vacio o cero: sin id no hay con que buscar las
+    horas, y por nombre no se resuelve (lo dice la spec original).
+    """
+    return f"""
+EVALUATE
+SELECTCOLUMNS(
+    FILTER('ConsumosyReparaciones',
+        'ConsumosyReparaciones'[fecha] >= {_d(desde)} &&
+        'ConsumosyReparaciones'[fecha] <= {_d(hasta)} &&
+        NOT ISBLANK('ConsumosyReparaciones'[id_maquina]) &&
+        'ConsumosyReparaciones'[id_maquina] <> 0
+    ),
+    "id_maquina", 'ConsumosyReparaciones'[id_maquina],
+    "maquina", 'ConsumosyReparaciones'[maquina],
+    "tipo_maquina", 'ConsumosyReparaciones'[tipo_maquina],
+    "fecha", 'ConsumosyReparaciones'[fecha],
+    "repuesto", 'ConsumosyReparaciones'[repuesto],
+    "rubro", 'ConsumosyReparaciones'[rubro],
+    "cantidad", 'ConsumosyReparaciones'[Cantidad_Imputada],
+    "importe", 'ConsumosyReparaciones'[precargas],
+    "reparacion", 'ConsumosyReparaciones'[reparacion]
+)
+"""
+
+
+def dax_maquinas_con_horas(desde, hasta):
+    """Maquinas a las que el taller SI les cargo horas en el periodo.
+
+    Cuentan las aprobadas y las pendientes por igual: las rechazadas no llegan
+    al modelo. Es el mismo criterio del Preliquidador.
+    """
+    return f"""
+EVALUATE
+SELECTCOLUMNS(
+    SUMMARIZECOLUMNS(
+        'Horas_Personal_AppSheet'[id_maquina],
+        FILTER(ALL('Horas_Personal_AppSheet'[Fecha]),
+            'Horas_Personal_AppSheet'[Fecha] >= {_d(desde)} &&
+            'Horas_Personal_AppSheet'[Fecha] <= {_d(hasta)}),
+        "hs", SUM('Horas_Personal_AppSheet'[Horas]),
+        "veces", COUNTROWS('Horas_Personal_AppSheet')
+    ),
+    "id_maquina", 'Horas_Personal_AppSheet'[id_maquina],
+    "hs", [hs],
+    "veces", [veces]
+)
+"""
+
+
+# Propias vs terceros: en una maquina de terceros el repuesto se le descuenta a
+# alguien, asi que el caso cuesta plata y no solo prolijidad.
+DAX_PROPIEDAD = """
+EVALUATE
+SELECTCOLUMNS('Maestro_Maquinarias',
+    "id_maquina", 'Maestro_Maquinarias'[Id_Maq],
+    "propiedad", 'Maestro_Maquinarias'[Propiedad]
+)
+"""
+
+
 def dax_historico_mecanico(desde, hasta):
     """Horas por mecanico y MES, separadas en taller y campo.
 
@@ -515,6 +593,20 @@ def construir_todo():
         "dias_ranking": DIAS_RANKING_TRACTORISTAS,
         "generado_en": generado_en,
     }
+    # --- "La Falda vs App": repuestos sin horas del taller ---
+    df_rep = pbi(dax_repuestos_periodo(f["desde_falda"], f["hoy"]))
+    df_mh = pbi(dax_maquinas_con_horas(f["desde_falda"], f["hoy"]))
+    df_prop = pbi(DAX_PROPIEDAD)
+    ctx_falda = {
+        "datos": construir_falda_vs_app(df_rep, df_mh, df_prop),
+        "generado_en": generado_en,
+        "rango": f"{f['desde_falda'].strftime('%d/%m/%Y')} al {f['hoy'].strftime('%d/%m/%Y')}",
+    }
+    _r = ctx_falda["datos"]["resumen"]
+    print(f"  falda vs app: {_r.get('sin_horas', 0)} maquinas con repuestos y sin horas, "
+          f"sobre {_r.get('maquinas_con_repuestos', 0)} con repuestos "
+          f"({_r.get('repuestos_de_afuera', 0)} reparaciones de afuera excluidas)")
+
     # --- Historico mensual para el artifact de Gestion del Taller ---
     def _mensual(df, clave, campos):
         """Las filas traen anio/mes por separado y los nulos de DAX como NaN."""
@@ -556,7 +648,7 @@ def construir_todo():
         "rango": f"{f['desde_diario'].strftime('%d/%m/%Y')} al {f['hoy'].strftime('%d/%m/%Y')}",
     }
 
-    return ctx_taller, ctx_maquinaria, ctx_diario, historico
+    return ctx_taller, ctx_maquinaria, ctx_diario, ctx_falda, historico
  
  
 def render(nombre_template, contexto, salida):
@@ -586,11 +678,12 @@ def copiar_estaticos():
  
  
 if __name__ == "__main__":
-    ctx_taller, ctx_maquinaria, ctx_diario, historico = construir_todo()
+    ctx_taller, ctx_maquinaria, ctx_diario, ctx_falda, historico = construir_todo()
     copiar_estaticos()
     render("gestion_taller.html.j2", ctx_taller, "Gestion_Taller.html")
     render("reunion_maquinaria.html.j2", ctx_maquinaria, "Reunion_Semanal_Maquinaria.html")
     render("revision_diaria.html.j2", ctx_diario, "Chinagro_vs_App.html")
+    render("falda_vs_app.html.j2", ctx_falda, "La_Falda_vs_App.html")
     # Portada con los 2 links. Usa la misma plantilla/paleta que los reportes
     # (Inter + Inter Tight, variables CSS, el lockup del logo) para que no
     # parezca otra cosa. Antes era un HTML de 9 lineas escrito a mano aca.
