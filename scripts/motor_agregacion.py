@@ -754,6 +754,59 @@ def construir_ranking_tractoristas(df_campo, empleados=None, dias_reincidencia=4
 # "La Falda vs App": repuestos sin horas del taller
 # ---------------------------------------------------------------------------
 
+# Maquinaria de terceros, tal como la tiene la app (Preliquidador).
+#
+# POR QUE ESTA A MANO Y NO SE CONSULTA: el informe corre en GitHub Actions, que
+# llega a Power BI pero NO a la base del Preliquidador (191.101.235.7). La lista
+# es corta y cambia poco, asi que se escribe aca.
+#
+# DE DONDE SALE: los id_maquina distintos de terceros_repuesto y
+# terceros_hora_reparacion, que son los UNICOS que usan el id del sistema de
+# compras. Los de terceros_hora_servicio son de otro espacio de ids (el sistema
+# de campo) y NO enganchan: la misma maquina es la 52 en repuestos y la 466 en
+# servicio. Cruzar por esos no da nada.
+#
+# COMO REFRESCARLA (cuando entra un tercero nuevo):
+#   SELECT DISTINCT id_maquina, maquina FROM terceros_repuesto
+#   WHERE id_maquina IS NOT NULL
+#   UNION
+#   SELECT DISTINCT id_maquina, maquina FROM terceros_hora_reparacion
+#   WHERE id_maquina IS NOT NULL ORDER BY 2;
+#
+# OJO: la app no tiene un maestro de terceros. Esta lista sale de las quincenas
+# ya generadas, asi que una maquina de un tercero nuevo no aparece hasta que
+# alguien genere su quincena. Tomada el 11/11/2026, con 2 quincenas cargadas.
+MAQUINAS_DE_TERCEROS = {
+    52:   "TRACTOR DEUTZ A55 N°0001 TINO",
+    652:  "TRACTOR DEUTZ A55 N°0003 DIEGO PEREZ",
+    653:  "TRACTOR DEUTZ A55 N°0001 DIEGO PEREZ",
+    654:  "TRACTOR DEUTZ A55 N°0002 DIEGO PEREZ",
+    655:  "TRACTOR DEUTZ A55 N°0002 TINO",
+    656:  "TRACTOR DEUTZ A55 N°0003 TINO",
+    657:  "TRACTOR DEUTZ A56 N°0004 TINO",
+    658:  "TRACTOR DEUTZ 460 N°0001 FRANCO IBAÑEZ",
+    731:  "DESMALEZADORA 2M N°9874 DIEGO PEREZ",
+    733:  "HERBICIDA N°9873 DIEGO PEREZ",
+    735:  "CARGADORA MANITOU N°9872 DIEGO PEREZ",
+    786:  "TRACTOR NEW HOLLAND TT45 N°0069 DIEGO PEREZ",
+    813:  "TRACTOR DEUTZ N°0103 ORQUERA",
+    851:  "TRACTOR DEUTZ A65 N°0104 CESAR ROMERO",
+    997:  "TRACTOR AGCO ALLIS TURBO 9871 N°0110 DIEGO PEREZ",
+    1120: "CAMIONETA TOYOTA NHV198 CLAUDIO IBAÑEZ",
+}
+
+# Lo que no se cuenta como repuesto del taller: gas, higiene y seguridad, y caña.
+# Se mira el rubro y el nombre del repuesto. GAS pide que antes no haya otra
+# letra, para no llevarse puesto "DESGASTE"; CAÑA va entre bordes de palabra
+# para no agarrar "CANASTO". Escrito sin barras invertidas a proposito: un
+# escape mal puesto rompe el filtro en silencio.
+_NO_ES_REPUESTO = re.compile("(^|[^A-ZÑ])GAS|(^|[^A-ZÑ])CA[NÑ]A([^A-ZÑ]|$)|HIGIEN|SEGURID", re.IGNORECASE)
+
+
+def _excluido_por_rubro(rubro, repuesto) -> bool:
+    return bool(_NO_ES_REPUESTO.search(f"{rubro or ''} {repuesto or ''}"))
+
+
 def _es_de_afuera(valor):
     """Una reparacion hecha por un taller externo.
 
@@ -762,7 +815,7 @@ def _es_de_afuera(valor):
     return str(valor or "").strip().upper() == "S"
 
 
-def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None, solo_terceros=True):
+def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None):
     """Maquinas que recibieron repuestos y a las que el taller no les cargo
     ninguna hora, en el mismo periodo.
 
@@ -781,15 +834,13 @@ def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None, solo_terceros
     preguntar: si el repuesto se uso, faltan las horas; si no se uso, se le esta
     imputando un repuesto de mas.
 
-    `solo_terceros` deja solo la maquinaria de terceros, que es donde el caso
-    cuesta plata: ahi el repuesto se le descuenta a alguien. En una maquina
-    propia el mismo hueco es prolijidad de carga. Tambien saca de encima los
-    cajones genericos ("frente de pulverizada X", "maquinaria <persona>"), que
-    estan marcados como propios y llenaban la lista.
+    Mira SOLO la maquinaria de terceros, y la toma de MAQUINAS_DE_TERCEROS, que
+    es como la tiene la app. No se usa el campo Propiedad del maestro de Power
+    BI: da un conjunto distinto (marca como terceros cosas que la app no, y al
+    reves), y el que manda es el de la app, que es con el que se liquida.
 
-    Una maquina sin propiedad en el maestro NO se cuenta como tercero, pero se
-    informa aparte: si fueran muchas, el filtro estaria tapando casos reales en
-    vez de limpiarlos.
+    Tampoco se cuentan gas, higiene y seguridad ni caña: no son repuestos del
+    taller.
     """
     if df_repuestos is None or not len(df_repuestos):
         return {"casos": [], "resumen": {}}
@@ -816,18 +867,17 @@ def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None, solo_terceros
             if pd.notna(idm):
                 prop[int(idm)] = str(r.get("propiedad") or "").strip()
 
-    casos, fuera_propias, sin_propiedad = [], 0, 0
+    excluidas_rubro = rep_propias.apply(
+        lambda r: _excluido_por_rubro(r.get("rubro"), r.get("repuesto")), axis=1)
+    rep_propias = rep_propias[~excluidas_rubro]
+
+    casos, fuera_propias = [], 0
     for idm, g in rep_propias.groupby("id_maquina"):
         if int(idm) in con_horas:
             continue
-        if solo_terceros:
-            p = prop.get(int(idm), "")
-            if not p:
-                sin_propiedad += 1
-                continue
-            if not p.upper().startswith("TERCERO"):
-                fuera_propias += 1
-                continue
+        if int(idm) not in MAQUINAS_DE_TERCEROS:
+            fuera_propias += 1
+            continue
         g = g.sort_values("_fecha", ascending=False)
         items = [{
             "f": r["_fecha"].strftime("%d/%m"),
@@ -861,9 +911,9 @@ def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None, solo_terceros
             "importe_sin_horas": r1(sum(c["imp"] for c in casos)),
             "repuestos_de_afuera": int(de_afuera.sum()),
             "filas_repuestos": int(len(rep)),
-            "solo_terceros": bool(solo_terceros),
             "propias_excluidas": fuera_propias,
-            "sin_propiedad_excluidas": sin_propiedad,
+            "filas_excluidas_rubro": int(excluidas_rubro.sum()),
+            "terceros_en_lista": len(MAQUINAS_DE_TERCEROS),
         },
     }
 
