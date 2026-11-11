@@ -754,46 +754,36 @@ def construir_ranking_tractoristas(df_campo, empleados=None, dias_reincidencia=4
 # "La Falda vs App": repuestos sin horas del taller
 # ---------------------------------------------------------------------------
 
-# Maquinaria de terceros, tal como la tiene la app (Preliquidador).
+# QUIEN DICE QUE UNA MAQUINA ES DE UN TERCERO
 #
-# POR QUE ESTA A MANO Y NO SE CONSULTA: el informe corre en GitHub Actions, que
-# llega a Power BI pero NO a la base del Preliquidador (191.101.235.7). La lista
-# es corta y cambia poco, asi que se escribe aca.
+# Manda 'Maestro_Maquinarias'[Propiedad] del modelo, que sale del grupo1 de La
+# Falda (nuegrupo1maquinas: PROPIAS / TERCEROS). Se carga al dar de alta la
+# maquina, viene keyeado por el MISMO id_maquina que los repuestos y entra solo
+# en cada refresco: un tercero nuevo aparece sin tocar este archivo.
 #
-# DE DONDE SALE: los id_maquina distintos de terceros_repuesto y
-# terceros_hora_reparacion, que son los UNICOS que usan el id del sistema de
-# compras. Los de terceros_hora_servicio son de otro espacio de ids (el sistema
-# de campo) y NO enganchan: la misma maquina es la 52 en repuestos y la 466 en
-# servicio. Cruzar por esos no da nada.
+# POR QUE NO SE USA EL MAESTRO DE CHINAGRO, que tambien tiene la propiedad: para
+# llegar a el hay que pasar por nuemaquinas.idchinagro, y ese puente esta roto.
+# El campo lo comparten laa_maquinarias y laa_colectivos, que numeran por su
+# cuenta, asi que 21 ids chocan; ademas 173 de 830 maquinas no tienen enlace.
+# Caso concreto: la CAMIONETA TOYOTA NHV198 (id 1120) apunta al idchinagro 1,
+# que en Chinagro es un TRACTOR DEUTZ A55 PROPIO. Yendo por ahi, la camioneta
+# pasa a ser propia y se pierde el caso mas caro del informe.
 #
-# COMO REFRESCARLA (cuando entra un tercero nuevo):
-#   SELECT DISTINCT id_maquina, maquina FROM terceros_repuesto
-#   WHERE id_maquina IS NOT NULL
-#   UNION
-#   SELECT DISTINCT id_maquina, maquina FROM terceros_hora_reparacion
-#   WHERE id_maquina IS NOT NULL ORDER BY 2;
-#
-# OJO: la app no tiene un maestro de terceros. Esta lista sale de las quincenas
-# ya generadas, asi que una maquina de un tercero nuevo no aparece hasta que
-# alguien genere su quincena. Tomada el 11/11/2026, con 2 quincenas cargadas.
-MAQUINAS_DE_TERCEROS = {
-    52:   "TRACTOR DEUTZ A55 N°0001 TINO",
-    652:  "TRACTOR DEUTZ A55 N°0003 DIEGO PEREZ",
-    653:  "TRACTOR DEUTZ A55 N°0001 DIEGO PEREZ",
-    654:  "TRACTOR DEUTZ A55 N°0002 DIEGO PEREZ",
-    655:  "TRACTOR DEUTZ A55 N°0002 TINO",
-    656:  "TRACTOR DEUTZ A55 N°0003 TINO",
-    657:  "TRACTOR DEUTZ A56 N°0004 TINO",
-    658:  "TRACTOR DEUTZ 460 N°0001 FRANCO IBAÑEZ",
-    731:  "DESMALEZADORA 2M N°9874 DIEGO PEREZ",
-    733:  "HERBICIDA N°9873 DIEGO PEREZ",
-    735:  "CARGADORA MANITOU N°9872 DIEGO PEREZ",
-    786:  "TRACTOR NEW HOLLAND TT45 N°0069 DIEGO PEREZ",
-    813:  "TRACTOR DEUTZ N°0103 ORQUERA",
-    851:  "TRACTOR DEUTZ A65 N°0104 CESAR ROMERO",
-    997:  "TRACTOR AGCO ALLIS TURBO 9871 N°0110 DIEGO PEREZ",
-    1120: "CAMIONETA TOYOTA NHV198 CLAUDIO IBAÑEZ",
-}
+# La lista de la app (Preliquidador) tampoco sirve de fuente: sale de las
+# quincenas ya generadas, no de un maestro, y hoy tiene 16 maquinas contra las
+# 131 del modelo. Las 16 estan todas dentro de las 131.
+
+# Cajones genericos del maestro: no son maquinas, son bolsas donde se imputa un
+# gasto que no tiene maquina propia. Estan marcados como terceros y llenaban la
+# lista sin que hubiera nada que revisar.
+_CAJON_GENERICO = re.compile(
+    "^ *(MAQUINARIA |MAQUINAS GENERALES|DESCUENTO |FRENTE DE PULVERIZADA)", re.IGNORECASE)
+
+
+def _es_tercero(valor) -> bool:
+    """El catalogo escribe TERCEROS, pero tambien aparece TERCERO en singular."""
+    return str(valor or "").strip().upper().startswith("TERCERO")
+
 
 # Lo que no se cuenta como repuesto del taller: gas, higiene y seguridad, y caña.
 # Se mira el rubro y el nombre del repuesto. GAS pide que antes no haya otra
@@ -834,10 +824,10 @@ def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None):
     preguntar: si el repuesto se uso, faltan las horas; si no se uso, se le esta
     imputando un repuesto de mas.
 
-    Mira SOLO la maquinaria de terceros, y la toma de MAQUINAS_DE_TERCEROS, que
-    es como la tiene la app. No se usa el campo Propiedad del maestro de Power
-    BI: da un conjunto distinto (marca como terceros cosas que la app no, y al
-    reves), y el que manda es el de la app, que es con el que se liquida.
+    Mira SOLO la maquinaria de terceros, que es donde el caso cuesta plata: ahi
+    el repuesto se le descuenta a alguien. En una maquina propia el mismo hueco
+    es prolijidad de carga. Quien dice que es de un tercero esta explicado mas
+    arriba.
 
     Tampoco se cuentan gas, higiene y seguridad ni caña: no son repuestos del
     taller.
@@ -871,12 +861,22 @@ def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None):
         lambda r: _excluido_por_rubro(r.get("rubro"), r.get("repuesto")), axis=1)
     rep_propias = rep_propias[~excluidas_rubro]
 
-    casos, fuera_propias = [], 0
+    casos, fuera_propias, sin_propiedad, cajones = [], 0, 0, 0
     for idm, g in rep_propias.groupby("id_maquina"):
         if int(idm) in con_horas:
             continue
-        if int(idm) not in MAQUINAS_DE_TERCEROS:
+        p = prop.get(int(idm))
+        if p is None:
+            # No esta en el maestro. Se informa aparte: si fueran muchas, el
+            # filtro estaria tapando casos reales en vez de limpiarlos.
+            sin_propiedad += 1
+            continue
+        if not _es_tercero(p):
             fuera_propias += 1
+            continue
+        nombre = str(g["maquina"].dropna().iloc[0]) if g["maquina"].notna().any() else ""
+        if _CAJON_GENERICO.match(nombre):
+            cajones += 1
             continue
         g = g.sort_values("_fecha", ascending=False)
         items = [{
@@ -888,9 +888,9 @@ def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None):
         } for _, r in g.iterrows()]
         casos.append({
             "id": int(idm),
-            "maq": str(g["maquina"].dropna().iloc[0]) if g["maquina"].notna().any() else f"(id {int(idm)})",
+            "maq": nombre or f"(id {int(idm)})",
             "tipo": str(g["tipo_maquina"].dropna().iloc[0]) if g["tipo_maquina"].notna().any() else "",
-            "propiedad": prop.get(int(idm), ""),
+            "propiedad": p,
             "n": len(g),
             "imp": r1(g["importe"].sum()),
             "ultima": g["_fecha"].max().strftime("%d/%m"),
@@ -912,8 +912,11 @@ def construir_falda_vs_app(df_repuestos, df_horas, propiedad=None):
             "repuestos_de_afuera": int(de_afuera.sum()),
             "filas_repuestos": int(len(rep)),
             "propias_excluidas": fuera_propias,
+            "cajones_excluidos": cajones,
+            "sin_propiedad_excluidas": sin_propiedad,
             "filas_excluidas_rubro": int(excluidas_rubro.sum()),
-            "terceros_en_lista": len(MAQUINAS_DE_TERCEROS),
+            "terceros_en_maestro": sum(
+                1 for v in prop.values() if _es_tercero(v)),
         },
     }
 
