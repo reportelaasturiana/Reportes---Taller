@@ -23,20 +23,12 @@ header img{width:34px;height:44px;object-fit:contain}
 .enm{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:17px;letter-spacing:-.02em;line-height:1.1}
 .esb{font-size:11px;color:var(--s)}
 h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-spacing:-.02em;margin:14px 0 4px}
+.cnt{font-weight:800;color:var(--r);font-size:12.5px;margin-left:6px}
 .sub{color:var(--s);font-size:12.5px;line-height:1.55;margin:0 0 4px;max-width:70ch}
 .upd{color:var(--s2);font-size:11px;margin-bottom:16px}
 .card{background:var(--w);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh);
   padding:14px 16px;margin-bottom:14px}
 .ctit{font-family:'Inter Tight',sans-serif;font-weight:800;font-size:15px;margin-bottom:10px}
-.nota{background:var(--ac);border-left:3px solid var(--a);padding:9px 11px;border-radius:6px;
-  font-size:12px;line-height:1.6;color:var(--s)}
-.nota strong{color:var(--t)}
-.kpis{display:flex;flex-wrap:wrap;gap:10px}
-.kpi{flex:1 1 130px;background:var(--bg);border-radius:9px;padding:9px 11px}
-.kpi .k{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s2)}
-.kpi .v{font-size:20px;font-weight:800;font-family:'Inter Tight',sans-serif;margin-top:2px;
-  font-variant-numeric:tabular-nums}
-.kpi.alerta .v{color:var(--r)}
 .filtros{display:flex;flex-wrap:wrap;gap:7px;align-items:flex-end;margin-bottom:4px}
 .fg{display:flex;flex-direction:column;gap:3px;min-width:0}
 .fg label{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s2)}
@@ -91,26 +83,6 @@ h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-sp
 <p class="upd">🕒 Actualizado: {{ generado_en }} · Período: {{ rango }}</p>
 
 <div class="card">
-  <div class="ctit">📊 Resumen del período</div>
-  <div class="kpis" id="kpis"></div>
-  <div class="nota" style="margin-top:12px">
-    <strong>Esto no es un error en sí mismo: es algo para preguntar.</strong>
-    Si el repuesto se usó, faltan las horas del taller. Si no se usó, se le está imputando
-    un repuesto de más a esa máquina.<br>
-    <strong>Solo maquinaria de terceros</strong>: ahí el repuesto se le descuenta a alguien.
-    En una máquina propia el mismo hueco es prolijidad de carga. Tercero es lo que dice el
-    maestro de La Falda ({{ datos.resumen.terceros_en_maestro }} máquinas), así que un tercero
-    nuevo entra solo, sin tocar nada. Quedan afuera los cajones genéricos («maquinaria de ...»,
-    «descuento ...», «máquinas generales»): no son máquinas, son bolsas donde se imputa.<br>
-    <strong>No se cuentan gas, higiene y seguridad ni caña</strong>: no son repuestos del taller.<br>
-    Se cruza por el <strong>id de máquina</strong>, que es el mismo en los dos sistemas porque el
-    maestro del taller se pega del de compras. Las horas cuentan <strong>aprobadas y pendientes</strong>;
-    las rechazadas no llegan. Las <strong>reparaciones de afuera</strong> no cuentan como repuesto
-    recibido: las hizo otro taller, y el propio no tenía por qué cargarles horas.
-  </div>
-</div>
-
-<div class="card">
   <div class="ctit">🔎 Filtros</div>
   <div class="filtros">
     <div class="fg"><label for="f-buscar">Buscar máquina o repuesto</label>
@@ -126,7 +98,7 @@ h1{font-family:'Inter Tight',sans-serif;font-weight:900;font-size:26px;letter-sp
 </div>
 
 <div class="card">
-  <div class="ctit">🔧 Máquinas con repuestos y sin horas</div>
+  <div class="ctit">🔧 Máquinas con repuestos y sin horas <span id="ctot"></span></div>
   <div class="desb"><div id="lista"></div></div>
 </div>
 
@@ -137,19 +109,6 @@ const D = {{ datos|tojson }};
 const f0 = n => Math.round(n).toLocaleString('es-AR');
 const $ = id => document.getElementById(id);
 
-function kpis(){
-  const r = D.resumen;
-  $('kpis').innerHTML = [
-    ['Sin horas', r.sin_horas, true],
-    ['Con repuestos', r.maquinas_con_repuestos, false],
-    ['Con horas cargadas', r.maquinas_con_horas, false],
-    ['Importe sin horas', '$' + f0(r.importe_sin_horas), true],
-    ['Reparaciones de afuera', r.repuestos_de_afuera, false],
-    ['Propias no contadas', r.propias_excluidas, false],
-    ['Cajones genéricos', r.cajones_excluidos, false]
-  ].map(x => '<div class="kpi' + (x[2] ? ' alerta' : '') + '"><div class="k">' + x[0] +
-    '</div><div class="v">' + x[1] + '</div></div>').join('');
-}
 
 function visibles(){
   const q = $('f-buscar').value.trim().toLowerCase();
@@ -173,6 +132,9 @@ function visibles(){
 
 function pintar(){
   const cs = visibles();
+  const tot = cs.reduce((a, c) => a + c.imp, 0);
+  $('ctot').innerHTML = cs.length
+    ? '<span class="cnt">' + cs.length + ' · $' + f0(tot) + '</span>' : '';
   if(!cs.length){
     $('lista').innerHTML = '<p class="vacio">No hay máquinas con estos filtros.</p>';
     return;
@@ -215,7 +177,6 @@ document.addEventListener('click', function(e){
 });
 
 (function init(){
-  kpis();
   const tipos = [...new Set(D.casos.map(c => c.tipo).filter(Boolean))].sort();
   $('f-tipo').innerHTML = '<option value="">Todos los tipos</option>' +
     tipos.map(t => '<option value="' + t + '">' + t + '</option>').join('');
