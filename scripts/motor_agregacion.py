@@ -595,12 +595,21 @@ def clasificar_fluido(nombre_insumo):
 # Bloque 12: topSupervisores
 # ---------------------------------------------------------------------------
  
-# Subrubros que NO son una asistencia a campo y ensuciaban el Top de supervisores.
-# El 386 "TRASLADOS TRACTORISTAS" es traslado de tractoristas, no un mecanico
-# yendo a asistir una maquina. Pesaba: al 14/9/2026 eran 14 de 46 registros (30%)
-# y 40 hs. Se excluye por el CODIGO del principio y no por el texto completo,
-# para que siga andando si le cambian la descripcion en AppSheet.
-SUBRUBROS_EXCLUIDOS_CAMPO = {"386"}
+# QUE NO CUENTA COMO ASISTENCIA A CAMPO
+#
+# Una salida a campo se anota igual que una asistencia, pero no todas lo son:
+#
+#   * Traslado de tractoristas: es llevar gente, no un mecanico asistiendo una
+#     maquina rota.
+#   * Mantenimiento de campaña: estaba programado. Si cuenta como asistencia,
+#     un tractorista aparece reincidente por tareas que se le iban a hacer de
+#     todos modos.
+#
+# EL TRASLADO SE RECONOCE POR EL TEXTO Y NO POR EL NUMERO. Antes era el subrubro
+# 386 y la regla miraba ese codigo; con la renumeracion del maestro paso a ser
+# "1. TRASLADOS TRACTORISTAS" del rubro TRASLADOS, asi que la regla vieja dejo
+# de filtrar nada sin avisar. Al 16/11/2026 eran 111 filas de campo en 90 dias.
+_TRASLADO_TRACTORISTAS = re.compile("TRASLADOS? +TRACTORISTAS?", re.IGNORECASE)
 
 
 def codigo_subrubro(sub):
@@ -611,15 +620,46 @@ def codigo_subrubro(sub):
     return m.group(1) if m else None
 
 
+def _es_traslado_tractoristas(rubro, subrubro) -> bool:
+    return bool(_TRASLADO_TRACTORISTAS.search(f"{rubro or ''} {subrubro or ''}"))
+
+
+def _es_mantenimiento(tipo_reparacion) -> bool:
+    """Tipo_Reparacion = "Mantenimiento Campaña" en AppSheet.
+
+    OJO: en las filas de campo este campo casi no se carga. Al 16/11/2026, sobre
+    1.343 filas de campo de toda la historia habia 7 de mantenimiento y 6 de
+    rotura; el resto en blanco. O sea que hoy esta regla practicamente no saca
+    nada, y recien va a servir cuando lo empiecen a completar en la salida.
+    """
+    return str(tipo_reparacion or "").strip().upper().startswith("MANTENIMIENTO")
+
+
+def filas_no_asistencia(df):
+    """Mascara de las filas de campo que no cuentan como asistencia.
+
+    Se aplica ANTES de agrupar, para que se caiga de las visitas y de los
+    totales a la vez: si solo saliera del detalle, la cabecera no cerraria con
+    lo que se ve al desplegar.
+    """
+    if not len(df):
+        return pd.Series(dtype=bool, index=df.index)
+    traslado = df.apply(
+        lambda r: _es_traslado_tractoristas(r.get("Rubro"), r.get("SubRubro")), axis=1)
+    col = df["TipoReparacion"] if "TipoReparacion" in df.columns else None
+    mant = col.map(_es_mantenimiento) if col is not None else pd.Series(False, index=df.index)
+    return traslado | mant
+
+
 def construir_top_supervisores(df_actual):
     campo_rows = df_actual[df_actual["TipoLugar"] == "CAMPO"]
     # El filtro va ANTES de agrupar, asi se cae de las visitas y de los totales
     # tambien: si solo se sacara del detalle, la cabecera no cerraria con lo que
     # se ve al desplegar.
-    excluidas = campo_rows["SubRubro"].map(codigo_subrubro).isin(SUBRUBROS_EXCLUIDOS_CAMPO)
+    excluidas = filas_no_asistencia(campo_rows)
     if excluidas.any():
-        print(f"  topSupervisores: excluidas {int(excluidas.sum())} filas de subrubros "
-              f"{sorted(SUBRUBROS_EXCLUIDOS_CAMPO)} (no son asistencias a campo)")
+        print(f"  topSupervisores: excluidas {int(excluidas.sum())} filas de campo "
+              f"(traslados de tractoristas y mantenimiento de campaña)")
     campo_rows = campo_rows[~excluidas]
     out = []
     for sup, g in campo_rows.groupby("Supervisor"):
@@ -694,9 +734,8 @@ def construir_ranking_tractoristas(df_campo, empleados=None, dias_reincidencia=4
     df["_cond"] = df["Conductor"].fillna("").astype(str).str.strip()
     df["_tipo"] = df["TipoReparacion"].map(_clasificar_reparacion)
 
-    # Mismo criterio que el top de supervisores: los traslados de tractoristas no
-    # son una asistencia por rotura.
-    df = df[~df["_sub"].map(codigo_subrubro).isin(SUBRUBROS_EXCLUIDOS_CAMPO)]
+    # Mismo criterio que el top de supervisores.
+    df = df[~filas_no_asistencia(df)]
     # Sin conductor no hay a quien atribuirlo (en campo es <2% de las filas).
     df = df[(df["_cond"] != "") & df["FechaDT"].notna()]
     if not len(df):
