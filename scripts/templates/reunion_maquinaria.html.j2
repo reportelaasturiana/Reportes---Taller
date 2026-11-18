@@ -184,15 +184,19 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .fblq-hs{font-size:10.5px;color:var(--s2);margin-left:auto;white-space:nowrap}
 .fblq-b{display:none;padding:8px 10px 4px;background:#fafafa}
 .fblq-b.open{display:block}
-.sal{background:#fff;border:1px solid var(--bd);border-radius:7px;padding:7px 10px;margin-bottom:6px;overflow-x:auto}
-.sal-hdr{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:5px}
-.sal-mec{font-size:11.5px;font-weight:800;color:var(--t)}
-.sal-lug{font-size:10.5px;color:var(--s);background:var(--bg);border-radius:4px;padding:1px 6px}
-.sal-maqs{font-size:10.5px;font-weight:700;color:var(--s)}
-.sal-hs{font-size:10.5px;color:var(--s2);margin-left:auto;white-space:nowrap}
-.sal .itbl{min-width:360px}
-.sal .itbl td{padding:4px 10px}
-.sal .itbl tr:last-child td{border-bottom:none}
+/* Una linea por maquina, con la maquinaria adelante. El mecanico se escribe
+   una sola vez por salida: asi se ve de un vistazo que tres maquinas salieron
+   en el mismo viaje, sin repetir el nombre tres veces. */
+.fln-wrap{overflow-x:auto;background:#fff;border:1px solid var(--bd);border-radius:7px}
+.fln{width:100%;border-collapse:collapse;font-size:12px;min-width:520px}
+.fln td{padding:6px 10px;vertical-align:baseline;border-top:1px solid #f4f4f4}
+.fln tr.ini td{border-top:1px solid var(--bd)}
+.fln tr:first-child td{border-top:none}
+.fln-maq{font-weight:700;color:var(--t);white-space:nowrap}
+.fln-sub{color:var(--s);font-size:11px}
+.fln-mec{font-size:11px;font-weight:800;color:var(--t);white-space:nowrap}
+.fln-hs{text-align:right;color:var(--s2);font-size:11px;white-space:nowrap}
+.sal-lug{font-size:10.5px;color:var(--s);background:var(--bg);border-radius:4px;padding:1px 6px;white-space:nowrap}
 .rk-body.open{display:block}
 .rk-num{font-family:'Inter Tight',sans-serif;font-size:16px;font-weight:900;text-align:center;color:var(--s2)}
 .rk-num.n1{color:#c89000}.rk-num.n2{color:#8a929a}.rk-num.n3{color:#a06828}
@@ -385,7 +389,8 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 <div class="card mb18">
   <div class="ctit">🤝 Supervisores asistidos — semana {{ sem.rango_corto_guion }} · {{ top_supervisores|length }} en total</div>
   <div class="sec-sub">Están <strong>todos</strong> los supervisores asistidos en la semana, ordenados por cantidad de <strong>salidas</strong> · tocá un supervisor para abrir las fechas en que se lo fue a visitar, y tocá una fecha para ver los mecánicos que salieron y las máquinas de cada viaje</div>
-  <div class="sec-sub" style="color:var(--s2)">Una <strong>salida</strong> es una carga del mecánico a un mismo lugar, no una línea: si en un viaje se asistieron tres máquinas, cuenta como una sola salida y las tres aparecen adentro.</div>
+  <div class="sec-sub" style="color:var(--s2)">Una <strong>salida</strong> es una carga del mecánico en la app, no una línea: si en un viaje se asistieron tres máquinas, cuenta como una sola salida y el nombre del mecánico aparece una sola vez, arriba de todo lo que tocó en ese viaje.</div>
+  <div class="sec-sub" style="color:var(--s2)"><strong>La Falda</strong>, <strong>Mte. Grande</strong> y <strong>Caspinch.</strong> son el establecimiento al que el mecánico cargó esa línea en la app, no de dónde salió. Una misma salida puede tener líneas de dos establecimientos.</div>
   <div class="sec-sub" style="color:var(--s2)">No se cuentan los <strong>traslados de tractoristas</strong> (es llevar gente, no un mecánico asistiendo una máquina) ni el <strong>mantenimiento de campaña</strong> (estaba programado, no es una rotura que obligó a salir). Quedan afuera del detalle y también de las visitas y las horas.</div>
   <div id="tabla-top-supervisores"></div>
   <div class="cnota">{{ notas.lider_supervisores }}</div>
@@ -574,27 +579,22 @@ function renderTopSupervisores(){
     /* Una salida por viaje: adentro van las maquinas que se tocaron en ese
        mismo viaje, que es lo que antes se veia como si fueran salidas aparte. */
     const bloques=s.fechas.map(d=>{
-      const salidas=d.salidas.map(sa=>{
-        const filas=sa.lineas.map(l=>`<tr>
-            <td>${l.maq}</td>
-            <td style="font-size:11px;color:var(--s)">${l.sub||'—'}</td>
-            <td class="r">${nz(l.hs)} hs</td>
-            <td class="r">${nz(l.hst)} hs</td>
-            <td class="r">${nz(l.hsp)} hs</td>
-          </tr>`).join('');
-        const cuantas=sa.maqs===1?'1 máquina':`${sa.maqs} máquinas`;
-        return `<div class="sal">
-          <div class="sal-hdr">
-            <span class="sal-mec">${sa.mec}</span>
-            ${sa.lugar?`<span class="sal-lug">${sa.lugar}</span>`:''}
-            <span class="sal-maqs">${cuantas}</span>
-            <span class="sal-hs">${nz(sa.hs)} + ${nz(sa.hst)} tras. + ${nz(sa.hsp)} prep.</span>
-          </div>
-          <table class="itbl">
-            <tbody>${filas}</tbody>
-          </table>
-        </div>`;
-      }).join('');
+      /* Horas en una sola celda: sin encabezados, tres numeros sueltos no se
+         entienden, y asi cada linea dice sola lo que es. */
+      const horas=l=>{
+        const p=[nz(l.hs)+' hs'];
+        if(l.hst)p.push(nz(l.hst)+' tras.');
+        if(l.hsp)p.push(nz(l.hsp)+' prep.');
+        return p.join(' + ');
+      };
+      const filas=d.salidas.map(sa=>sa.lineas.map((l,ix)=>`<tr class="${ix===0?'ini':''}">
+            <td class="fln-maq">${l.maq}</td>
+            <td class="fln-sub">${l.sub||'—'}</td>
+            <td class="fln-mec">${ix===0?sa.mec:''}</td>
+            <td>${l.lug?`<span class="sal-lug">${l.lug}</span>`:''}</td>
+            <td class="fln-hs">${horas(l)}</td>
+          </tr>`).join('')).join('');
+      const salidas=`<div class="fln-wrap"><table class="fln"><tbody>${filas}</tbody></table></div>`;
       const n=d.salidas.length;
       const maqs=d.salidas.reduce((a,sa)=>a+sa.maqs,0);
       const hs=d.salidas.reduce((a,sa)=>a+sa.hs+sa.hst+sa.hsp,0);

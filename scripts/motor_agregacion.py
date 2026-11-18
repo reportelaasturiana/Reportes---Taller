@@ -656,8 +656,12 @@ def _clave_salida(row):
 
     RegistroID es el id de la carga en AppSheet: agrupa las lineas que el
     mecanico cargo juntas, que es lo mas parecido a "una salida" que tiene el
-    sistema. Se le suma el Lugar porque una misma carga puede tener lineas de
-    taller y de campo.
+    sistema. Se usa SOLO el RegistroID: antes se le sumaba el Lugar, y eso
+    partia en dos viajes lo que era uno solo. Caso real del 14/11/2026, carga
+    6c8f23ac de BRITO: el mismo TRACTOR PAUNY A180 N0049 con una linea en
+    CAMPO LA FALDA y otra en CAMPO MONTE GRANDE. Las lineas ya vienen
+    filtradas a campo, asi que lo unico que aportaba el Lugar era separar
+    establecimientos de una misma salida.
 
     Verificado el 18/11/2026 sobre 90 dias de campo: 763 lineas se agrupan en
     580 salidas; 100 de esas salidas tocaron mas de una maquina (hasta 6), y
@@ -665,7 +669,7 @@ def _clave_salida(row):
     mismo dia (80 casos), asi que agrupar por fecha sola las juntaria mal.
 
     Si RegistroID viene vacio (filas viejas, de antes de que AppSheet lo
-    guardara) se cae a fecha + mecanico + lugar, que agrupa casi igual.
+    guardara) se cae a fecha + mecanico, que agrupa casi igual.
     """
     # OJO con `x or ""`: los nulos de DAX llegan como NaN, que es VERDADERO,
     # asi que esa forma devuelve el texto "nan" y cada fila cae en su propio
@@ -674,14 +678,13 @@ def _clave_salida(row):
         return "" if v is None or (not isinstance(v, str) and pd.isna(v)) else str(v).strip()
 
     reg = _txt(row.get("RegistroID"))
-    lugar = _txt(row.get("Lugar"))
-    if not reg:
-        fecha = row.get("FechaDT")
-        dia = fecha.strftime("%Y-%m-%d") if pd.notna(fecha) else "?"
-        reg = f"{dia}~{row.get('Mecanico')}"
+    if reg:
+        return reg
+    fecha = row.get("FechaDT")
+    dia = fecha.strftime("%Y-%m-%d") if pd.notna(fecha) else "?"
     # Texto y no tupla: pandas desarma las tuplas al agrupar y cada fila
     # terminaria en su propio grupo.
-    return f"{reg}~{lugar}"
+    return f"{dia}~{_txt(row.get('Mecanico'))}"
 
 
 def construir_top_supervisores(df_actual):
@@ -712,16 +715,18 @@ def construir_top_supervisores(df_actual):
             continue
         por_fecha, n_salidas = {}, 0
         for (_, fdt), gs in g.groupby(["_salida", "FechaDT"], sort=False):
+            # El lugar va en la linea y no en la salida: una misma carga puede
+            # tener lineas de dos establecimientos (ver _clave_salida).
             lineas = [{
                 "maq": row["Maquina"],
                 "sub": row["SubRubro"] if pd.notna(row["SubRubro"]) else None,
+                "lug": row["Taller"] if pd.notna(row["Taller"]) else None,
                 "hs": r1(row["Horas"]), "hst": r1(row["HorasTraslado"]),
                 "hsp": r1(row["HorasPrep"]),
             } for _, row in gs.iterrows()]
             lineas.sort(key=lambda x: str(x["maq"] or ""))
             salida = {
                 "mec": gs["Mecanico"].dropna().iloc[0] if gs["Mecanico"].notna().any() else "",
-                "lugar": gs["Taller"].dropna().iloc[0] if gs["Taller"].notna().any() else "",
                 "maqs": int(gs["Maquina"].nunique()),
                 "hs": r1(gs["Horas"].sum()), "hst": r1(gs["HorasTraslado"].sum()),
                 "hsp": r1(gs["HorasPrep"].sum()),
