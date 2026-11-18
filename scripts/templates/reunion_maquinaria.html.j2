@@ -375,8 +375,8 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 <div class="sl mb18">🌾 Asistencias a campo — semana {{ sem.rango_corto_guion }}</div>
  
 <div class="card mb18">
-  <div class="ctit">🤝 Top 5 supervisores asistidos — semana {{ sem.rango_corto_guion }}</div>
-  <div class="sec-sub">Ordenado por cantidad de <strong>salidas</strong> · tocá un supervisor para abrir sus fechas, y dentro de cada fecha cada salida con todas las máquinas que se tocaron en ese mismo viaje</div>
+  <div class="ctit">🤝 Supervisores asistidos — semana {{ sem.rango_corto_guion }} · {{ top_supervisores|length }} en total</div>
+  <div class="sec-sub">Están <strong>todos</strong> los supervisores asistidos en la semana, ordenados por cantidad de <strong>salidas</strong> · tocá un supervisor para abrir las fechas en que se lo fue a visitar, y dentro de cada fecha cada salida con todas las máquinas que se tocaron en ese mismo viaje</div>
   <div class="sec-sub" style="color:var(--s2)">Una <strong>salida</strong> es una carga del mecánico a un mismo lugar, no una línea: si en un viaje se asistieron tres máquinas, cuenta como una sola salida y las tres aparecen adentro.</div>
   <div class="sec-sub" style="color:var(--s2)">No se cuentan los <strong>traslados de tractoristas</strong> (es llevar gente, no un mecánico asistiendo una máquina) ni el <strong>mantenimiento de campaña</strong> (estaba programado, no es una rotura que obligó a salir). Quedan afuera del detalle y también de las visitas y las horas.</div>
   <div id="tabla-top-supervisores"></div>
@@ -548,8 +548,10 @@ function renderFluidos(){
 function renderTopSupervisores(){
   const nz=x=>(''+x).replace('.',',');
   const COLS='30px 1fr 74px 74px 70px 70px 70px';
+  /* Todos los supervisores de la semana, no un top: el que tuvo una sola
+     salida tambien tiene que poder abrirse. Se ordenan por salidas. */
   const sorted=topSupervisores.slice()
-    .sort((a,b)=>b.salidas-a.salidas||(b.t+b.tr+b.p)-(a.t+a.tr+a.p)).slice(0,5);
+    .sort((a,b)=>b.salidas-a.salidas||(b.t+b.tr+b.p)-(a.t+a.tr+a.p));
   let rows='';
   sorted.forEach((s,i)=>{
     /* Una salida por viaje: adentro van las maquinas que se tocaron en ese
