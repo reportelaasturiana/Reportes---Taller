@@ -175,9 +175,15 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .rk-hdr{display:grid;grid-template-columns:30px 1fr 90px 60px;align-items:center;gap:10px;padding:9px 12px;cursor:pointer}
 .rk-body{display:none;background:#fafafa;border-top:1px solid var(--bd);padding:9px 14px}
 /* Supervisor -> fecha -> salida */
-.fblq{margin-bottom:12px}
-.fblq-f{font-size:12px;font-weight:800;color:var(--t);padding:3px 0 6px;border-bottom:1px solid var(--bd);margin-bottom:7px}
-.fblq-n{font-weight:600;color:var(--s2);font-size:10.5px;margin-left:8px;text-transform:uppercase;letter-spacing:.04em}
+.fblq{margin-bottom:6px;background:#fff;border:1px solid var(--bd);border-radius:7px;overflow:hidden}
+.fblq-f{display:flex;align-items:baseline;gap:8px;font-size:12px;font-weight:800;color:var(--t);padding:8px 10px;cursor:pointer}
+.fblq-f:hover{background:#f7f7f7}
+.fblq-f.open{background:#f3f6fa;border-bottom:1px solid var(--bd)}
+.fblq-ar{font-size:10px;color:var(--s2);width:10px;flex-shrink:0}
+.fblq-n{font-weight:600;color:var(--s2);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+.fblq-hs{font-size:10.5px;color:var(--s2);margin-left:auto;white-space:nowrap}
+.fblq-b{display:none;padding:8px 10px 4px;background:#fafafa}
+.fblq-b.open{display:block}
 .sal{background:#fff;border:1px solid var(--bd);border-radius:7px;padding:7px 10px;margin-bottom:6px;overflow-x:auto}
 .sal-hdr{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:5px}
 .sal-mec{font-size:11.5px;font-weight:800;color:var(--t)}
@@ -376,7 +382,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
  
 <div class="card mb18">
   <div class="ctit">🤝 Supervisores asistidos — semana {{ sem.rango_corto_guion }} · {{ top_supervisores|length }} en total</div>
-  <div class="sec-sub">Están <strong>todos</strong> los supervisores asistidos en la semana, ordenados por cantidad de <strong>salidas</strong> · tocá un supervisor para abrir las fechas en que se lo fue a visitar, y dentro de cada fecha cada salida con todas las máquinas que se tocaron en ese mismo viaje</div>
+  <div class="sec-sub">Están <strong>todos</strong> los supervisores asistidos en la semana, ordenados por cantidad de <strong>salidas</strong> · tocá un supervisor para abrir las fechas en que se lo fue a visitar, y tocá una fecha para ver los mecánicos que salieron y las máquinas de cada viaje</div>
   <div class="sec-sub" style="color:var(--s2)">Una <strong>salida</strong> es una carga del mecánico a un mismo lugar, no una línea: si en un viaje se asistieron tres máquinas, cuenta como una sola salida y las tres aparecen adentro.</div>
   <div class="sec-sub" style="color:var(--s2)">No se cuentan los <strong>traslados de tractoristas</strong> (es llevar gente, no un mecánico asistiendo una máquina) ni el <strong>mantenimiento de campaña</strong> (estaba programado, no es una rotura que obligó a salir). Quedan afuera del detalle y también de las visitas y las horas.</div>
   <div id="tabla-top-supervisores"></div>
@@ -424,6 +430,15 @@ function goTab(area,tabId){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function toggleBody(head){var body=head.nextElementSibling;if(!body)return;body.classList.toggle('open');}
+/* La fecha se abre sola: al desplegar un supervisor se ven solo sus fechas, y
+   recien al tocar una aparecen los mecanicos que salieron ese dia. Abrir todo
+   de una dejaba una pared de tablas. */
+function toggleFecha(head){
+  var body=head.nextElementSibling;if(!body)return;
+  var abierto=body.classList.toggle('open');
+  head.classList.toggle('open',abierto);
+  var ar=head.querySelector('.fblq-ar');if(ar)ar.textContent=abierto?'▾':'▸';
+}
 function toggleMaqGrp(i){
   var b=document.getElementById('maqc-body-'+i);
   if(b)b.classList.toggle('open');
@@ -580,9 +595,16 @@ function renderTopSupervisores(){
         </div>`;
       }).join('');
       const n=d.salidas.length;
+      const maqs=d.salidas.reduce((a,sa)=>a+sa.maqs,0);
+      const hs=d.salidas.reduce((a,sa)=>a+sa.hs+sa.hst+sa.hsp,0);
       return `<div class="fblq">
-        <div class="fblq-f">${d.f}<span class="fblq-n">${n===1?'1 salida':n+' salidas'}</span></div>
-        ${salidas}
+        <div class="fblq-f" onclick="toggleFecha(this)">
+          <span class="fblq-ar">&#9656;</span>
+          <span>${d.f}</span>
+          <span class="fblq-n">${n===1?'1 salida':n+' salidas'} &middot; ${maqs===1?'1 máquina':maqs+' máquinas'}</span>
+          <span class="fblq-hs">${nz(Math.round(hs*10)/10)} hs</span>
+        </div>
+        <div class="fblq-b">${salidas}</div>
       </div>`;
     }).join('');
     rows+=`<div class="rk-row">
@@ -596,7 +618,7 @@ function renderTopSupervisores(){
         <div class="r" style="text-align:right">${nz(s.p)} hs</div>
       </div>
       <div class="rk-body">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--s);margin-bottom:8px">Por fecha · dentro de cada fecha, cada salida con lo que se tocó en ese viaje</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--s);margin-bottom:8px">Tocá una fecha para ver qué mecánicos salieron ese día y qué máquinas tocaron</div>
         ${bloques}
       </div>
     </div>`;
