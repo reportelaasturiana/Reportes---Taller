@@ -194,7 +194,8 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .fln tr:first-child td{border-top:none}
 .fln-maq{font-weight:700;color:var(--t);white-space:nowrap}
 .fln-sub{color:var(--s);font-size:11px}
-.fln-mec{font-size:11px;font-weight:800;color:var(--t);white-space:nowrap}
+.fln-mec{font-size:11px;font-weight:800;color:var(--t);white-space:nowrap;vertical-align:middle;background:#fbfbfc;border-left:1px solid #f0f0f0;border-right:1px solid #f0f0f0}
+.fln-mec-n{font-size:9px;font-weight:600;color:var(--s2);text-transform:uppercase;letter-spacing:.03em;margin-top:2px}
 .fln-hs{text-align:right;color:var(--s2);font-size:11px;white-space:nowrap}
 .sal-lug{font-size:10.5px;color:var(--s);background:var(--bg);border-radius:4px;padding:1px 6px;white-space:nowrap}
 .rk-body.open{display:block}
@@ -587,13 +588,22 @@ function renderTopSupervisores(){
         if(l.hsp)p.push(nz(l.hsp)+' prep.');
         return p.join(' + ');
       };
-      const filas=d.salidas.map(sa=>sa.lineas.map((l,ix)=>`<tr class="${ix===0?'ini':''}">
+      /* La celda del mecanico se estira sobre todas las lineas de la salida
+         (rowspan). Escribirlo solo en la primera fila y dejar las otras en
+         blanco se leia como si faltara el dato. */
+      const filas=d.salidas.map(sa=>{
+        const n=sa.lineas.length;
+        const celdaMec=`<td class="fln-mec" rowspan="${n}">${sa.mec}`
+          + (n>1?`<div class="fln-mec-n">una sola salida &middot; ${n} líneas</div>`:'')
+          + `</td>`;
+        return sa.lineas.map((l,ix)=>`<tr class="${ix===0?'ini':''}">
             <td class="fln-maq">${l.maq}</td>
             <td class="fln-sub">${l.sub||'—'}</td>
-            <td class="fln-mec">${ix===0?sa.mec:''}</td>
+            ${ix===0?celdaMec:''}
             <td>${l.lug?`<span class="sal-lug">${l.lug}</span>`:''}</td>
             <td class="fln-hs">${horas(l)}</td>
-          </tr>`).join('')).join('');
+          </tr>`).join('');
+      }).join('');
       const salidas=`<div class="fln-wrap"><table class="fln"><tbody>${filas}</tbody></table></div>`;
       const n=d.salidas.length;
       const maqs=d.salidas.reduce((a,sa)=>a+sa.maqs,0);
