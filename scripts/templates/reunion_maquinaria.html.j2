@@ -190,7 +190,9 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .sal-lug{font-size:10.5px;color:var(--s);background:var(--bg);border-radius:4px;padding:1px 6px}
 .sal-maqs{font-size:10.5px;font-weight:700;color:var(--s)}
 .sal-hs{font-size:10.5px;color:var(--s2);margin-left:auto;white-space:nowrap}
-.sal .itbl{min-width:440px}
+.sal .itbl{min-width:360px}
+.sal .itbl td{padding:4px 10px}
+.sal .itbl tr:last-child td{border-bottom:none}
 .rk-body.open{display:block}
 .rk-num{font-family:'Inter Tight',sans-serif;font-size:16px;font-weight:900;text-align:center;color:var(--s2)}
 .rk-num.n1{color:#c89000}.rk-num.n2{color:#8a929a}.rk-num.n3{color:#a06828}
@@ -589,7 +591,6 @@ function renderTopSupervisores(){
             <span class="sal-hs">${nz(sa.hs)} + ${nz(sa.hst)} tras. + ${nz(sa.hsp)} prep.</span>
           </div>
           <table class="itbl">
-            <thead><tr><th>Maquinaria</th><th>Subrubro / detalle</th><th class="r">Hs trabajo</th><th class="r">Hs traslado</th><th class="r">Hs prep.</th></tr></thead>
             <tbody>${filas}</tbody>
           </table>
         </div>`;
