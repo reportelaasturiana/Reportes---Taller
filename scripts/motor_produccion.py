@@ -138,6 +138,7 @@ SELECTCOLUMNS(
         'Horas_Personal_AppSheet'[Fecha] >= {_d(desde)} &&
         'Horas_Personal_AppSheet'[Fecha] <= {_d(hasta)}
     ),
+    "RegistroID", 'Horas_Personal_AppSheet'[RegistroID],
     "Fecha", 'Horas_Personal_AppSheet'[Fecha],
     "Cuil", 'Horas_Personal_AppSheet'[Cuil],
     "Mecanico", 'Horas_Personal_AppSheet'[Mecánico],

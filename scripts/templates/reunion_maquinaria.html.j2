@@ -174,6 +174,17 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .rk-row:hover{box-shadow:var(--sh)}
 .rk-hdr{display:grid;grid-template-columns:30px 1fr 90px 60px;align-items:center;gap:10px;padding:9px 12px;cursor:pointer}
 .rk-body{display:none;background:#fafafa;border-top:1px solid var(--bd);padding:9px 14px}
+/* Supervisor -> fecha -> salida */
+.fblq{margin-bottom:12px}
+.fblq-f{font-size:12px;font-weight:800;color:var(--t);padding:3px 0 6px;border-bottom:1px solid var(--bd);margin-bottom:7px}
+.fblq-n{font-weight:600;color:var(--s2);font-size:10.5px;margin-left:8px;text-transform:uppercase;letter-spacing:.04em}
+.sal{background:#fff;border:1px solid var(--bd);border-radius:7px;padding:7px 10px;margin-bottom:6px;overflow-x:auto}
+.sal-hdr{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:5px}
+.sal-mec{font-size:11.5px;font-weight:800;color:var(--t)}
+.sal-lug{font-size:10.5px;color:var(--s);background:var(--bg);border-radius:4px;padding:1px 6px}
+.sal-maqs{font-size:10.5px;font-weight:700;color:var(--s)}
+.sal-hs{font-size:10.5px;color:var(--s2);margin-left:auto;white-space:nowrap}
+.sal .itbl{min-width:440px}
 .rk-body.open{display:block}
 .rk-num{font-family:'Inter Tight',sans-serif;font-size:16px;font-weight:900;text-align:center;color:var(--s2)}
 .rk-num.n1{color:#c89000}.rk-num.n2{color:#8a929a}.rk-num.n3{color:#a06828}
@@ -365,7 +376,8 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
  
 <div class="card mb18">
   <div class="ctit">🤝 Top 5 supervisores asistidos — semana {{ sem.rango_corto_guion }}</div>
-  <div class="sec-sub">Ordenado por cantidad de visitas (días distintos asistidos) · tocá un supervisor para ver el detalle: qué maquinaria se reparó y cuántas horas de trabajo, traslado y preparación</div>
+  <div class="sec-sub">Ordenado por cantidad de <strong>salidas</strong> · tocá un supervisor para abrir sus fechas, y dentro de cada fecha cada salida con todas las máquinas que se tocaron en ese mismo viaje</div>
+  <div class="sec-sub" style="color:var(--s2)">Una <strong>salida</strong> es una carga del mecánico a un mismo lugar, no una línea: si en un viaje se asistieron tres máquinas, cuenta como una sola salida y las tres aparecen adentro.</div>
   <div class="sec-sub" style="color:var(--s2)">No se cuentan los <strong>traslados de tractoristas</strong> (es llevar gente, no un mecánico asistiendo una máquina) ni el <strong>mantenimiento de campaña</strong> (estaba programado, no es una rotura que obligó a salir). Quedan afuera del detalle y también de las visitas y las horas.</div>
   <div id="tabla-top-supervisores"></div>
   <div class="cnota">{{ notas.lider_supervisores }}</div>
@@ -534,45 +546,61 @@ function renderFluidos(){
 <script>
 /* ============== RENDER: SUPERVISORES ============== */
 function renderTopSupervisores(){
-  const sorted=topSupervisores.slice().sort((a,b)=>b.visitas-a.visitas||(b.t+b.tr+b.p)-(a.t+a.tr+a.p)).slice(0,5);
-  const parseFecha=(f)=>{ const [d,m,y]=f.split('/').map(Number); return new Date(y,m-1,d); };
+  const nz=x=>(''+x).replace('.',',');
+  const COLS='30px 1fr 74px 74px 70px 70px 70px';
+  const sorted=topSupervisores.slice()
+    .sort((a,b)=>b.salidas-a.salidas||(b.t+b.tr+b.p)-(a.t+a.tr+a.p)).slice(0,5);
   let rows='';
   sorted.forEach((s,i)=>{
-    const recsSorted=s.recs.slice().sort((a,b)=>{
-      if(a.maq!==b.maq) return a.maq.localeCompare(b.maq);
-      return parseFecha(b.f)-parseFecha(a.f);
-    });
-    const detRows=recsSorted.map(r=>`<tr>
-        <td>${r.f}</td>
-        <td>${r.mec}</td>
-        <td>${r.maq}</td>
-        <td style="font-size:11px;color:var(--s)">${r.sub||'—'}</td>
-        <td class="r">${(''+r.hs).replace('.',',')} hs</td>
-        <td class="r">${(''+r.hst).replace('.',',')} hs</td>
-        <td class="r">${(''+r.hsp).replace('.',',')} hs</td>
-      </tr>`).join('');
+    /* Una salida por viaje: adentro van las maquinas que se tocaron en ese
+       mismo viaje, que es lo que antes se veia como si fueran salidas aparte. */
+    const bloques=s.fechas.map(d=>{
+      const salidas=d.salidas.map(sa=>{
+        const filas=sa.lineas.map(l=>`<tr>
+            <td>${l.maq}</td>
+            <td style="font-size:11px;color:var(--s)">${l.sub||'—'}</td>
+            <td class="r">${nz(l.hs)} hs</td>
+            <td class="r">${nz(l.hst)} hs</td>
+            <td class="r">${nz(l.hsp)} hs</td>
+          </tr>`).join('');
+        const cuantas=sa.maqs===1?'1 máquina':`${sa.maqs} máquinas`;
+        return `<div class="sal">
+          <div class="sal-hdr">
+            <span class="sal-mec">${sa.mec}</span>
+            ${sa.lugar?`<span class="sal-lug">${sa.lugar}</span>`:''}
+            <span class="sal-maqs">${cuantas}</span>
+            <span class="sal-hs">${nz(sa.hs)} + ${nz(sa.hst)} tras. + ${nz(sa.hsp)} prep.</span>
+          </div>
+          <table class="itbl">
+            <thead><tr><th>Maquinaria</th><th>Subrubro / detalle</th><th class="r">Hs trabajo</th><th class="r">Hs traslado</th><th class="r">Hs prep.</th></tr></thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </div>`;
+      }).join('');
+      const n=d.salidas.length;
+      return `<div class="fblq">
+        <div class="fblq-f">${d.f}<span class="fblq-n">${n===1?'1 salida':n+' salidas'}</span></div>
+        ${salidas}
+      </div>`;
+    }).join('');
     rows+=`<div class="rk-row">
-      <div class="rk-hdr" onclick="toggleBody(this)" style="grid-template-columns:30px 1fr 90px 70px 70px 70px">
+      <div class="rk-hdr" onclick="toggleBody(this)" style="grid-template-columns:${COLS}">
         <div class="rk-num ${i===0?'n1':i===1?'n2':i===2?'n3':''}">${i+1}</div>
         <div class="rk-name">${s.n}</div>
-        <div class="c" style="text-align:center;font-weight:700">${s.visitas}</div>
-        <div class="r" style="text-align:right">${(''+s.t).replace('.',',')} hs</div>
-        <div class="r" style="text-align:right">${(''+s.tr).replace('.',',')} hs</div>
-        <div class="r" style="text-align:right">${(''+s.p).replace('.',',')} hs</div>
+        <div class="c" style="text-align:center;font-weight:700">${s.salidas}</div>
+        <div class="c" style="text-align:center">${s.maqs}</div>
+        <div class="r" style="text-align:right">${nz(s.t)} hs</div>
+        <div class="r" style="text-align:right">${nz(s.tr)} hs</div>
+        <div class="r" style="text-align:right">${nz(s.p)} hs</div>
       </div>
       <div class="rk-body">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--s);margin-bottom:6px">Detalle de asistencias, agrupado por máquina · fechas de más reciente a más vieja</div>
-        <div style="overflow-x:auto">
-          <table class="itbl">
-            <thead><tr><th>Fecha</th><th>Mecánico</th><th>Maquinaria</th><th>Subrubro / detalle</th><th class="r">Hs trabajo</th><th class="r">Hs traslado</th><th class="r">Hs prep.</th></tr></thead>
-            <tbody>${detRows}</tbody>
-          </table>
-        </div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--s);margin-bottom:8px">Por fecha · dentro de cada fecha, cada salida con lo que se tocó en ese viaje</div>
+        ${bloques}
       </div>
     </div>`;
   });
-  const header=`<div style="display:grid;grid-template-columns:30px 1fr 90px 70px 70px 70px;gap:8px;padding:0 12px 8px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--s);border-bottom:1px solid var(--bd);margin-bottom:6px">
-    <div>#</div><div>Supervisor</div><div style="text-align:center">Visitas</div><div style="text-align:right">Hs trabajo</div><div style="text-align:right">Hs traslado</div><div style="text-align:right">Hs prep.</div>
+  const header=`<div style="display:grid;grid-template-columns:${COLS};gap:8px;padding:0 12px 8px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--s);border-bottom:1px solid var(--bd);margin-bottom:6px">
+    <div>#</div><div>Supervisor</div><div style="text-align:center">Salidas</div><div style="text-align:center">Máquinas</div><div style="text-align:right">Hs trabajo</div><div style="text-align:right">Hs traslado</div><div style="text-align:right">Hs prep.</div>
   </div>`;
   set('tabla-top-supervisores', header+rows);
 }

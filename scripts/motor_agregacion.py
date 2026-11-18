@@ -651,9 +651,48 @@ def filas_no_asistencia(df):
     return traslado | mant
 
 
+def _clave_salida(row):
+    """Que lineas pertenecen a una misma salida.
+
+    RegistroID es el id de la carga en AppSheet: agrupa las lineas que el
+    mecanico cargo juntas, que es lo mas parecido a "una salida" que tiene el
+    sistema. Se le suma el Lugar porque una misma carga puede tener lineas de
+    taller y de campo.
+
+    Verificado el 18/11/2026 sobre 90 dias de campo: 763 lineas se agrupan en
+    580 salidas; 100 de esas salidas tocaron mas de una maquina (hasta 6), y
+    ninguna tiene dos mecanicos. Un mecanico puede tener varias salidas en el
+    mismo dia (80 casos), asi que agrupar por fecha sola las juntaria mal.
+
+    Si RegistroID viene vacio (filas viejas, de antes de que AppSheet lo
+    guardara) se cae a fecha + mecanico + lugar, que agrupa casi igual.
+    """
+    # OJO con `x or ""`: los nulos de DAX llegan como NaN, que es VERDADERO,
+    # asi que esa forma devuelve el texto "nan" y cada fila cae en su propio
+    # grupo. Hay que preguntar por pd.isna().
+    def _txt(v):
+        return "" if v is None or (not isinstance(v, str) and pd.isna(v)) else str(v).strip()
+
+    reg = _txt(row.get("RegistroID"))
+    lugar = _txt(row.get("Lugar"))
+    if not reg:
+        fecha = row.get("FechaDT")
+        dia = fecha.strftime("%Y-%m-%d") if pd.notna(fecha) else "?"
+        reg = f"{dia}~{row.get('Mecanico')}"
+    # Texto y no tupla: pandas desarma las tuplas al agrupar y cada fila
+    # terminaria en su propio grupo.
+    return f"{reg}~{lugar}"
+
+
 def construir_top_supervisores(df_actual):
+    """Supervisor -> fechas -> salidas -> que se toco en cada salida.
+
+    Antes cada LINEA se mostraba como si fuera una visita, y una salida en la
+    que el mecanico vio tres maquinas figuraba como tres. Ahora la unidad es la
+    salida: se cuenta una por viaje, y adentro se listan las maquinas.
+    """
     campo_rows = df_actual[df_actual["TipoLugar"] == "CAMPO"]
-    # El filtro va ANTES de agrupar, asi se cae de las visitas y de los totales
+    # El filtro va ANTES de agrupar, asi se cae de las salidas y de los totales
     # tambien: si solo se sacara del detalle, la cabecera no cerraria con lo que
     # se ve al desplegar.
     excluidas = filas_no_asistencia(campo_rows)
@@ -661,24 +700,55 @@ def construir_top_supervisores(df_actual):
         print(f"  topSupervisores: excluidas {int(excluidas.sum())} filas de campo "
               f"(traslados de tractoristas y mantenimiento de campaña)")
     campo_rows = campo_rows[~excluidas]
+    if not len(campo_rows):
+        return []
+
+    campo_rows = campo_rows.copy()
+    campo_rows["_salida"] = campo_rows.apply(_clave_salida, axis=1)
+
     out = []
     for sup, g in campo_rows.groupby("Supervisor"):
         if pd.isna(sup):
             continue
-        visitas = g[["FechaDT", "Maquina"]].drop_duplicates().shape[0]
-        recs = [{
-            "f": row["FechaDT"].strftime("%d/%m/%Y"), "mec": row["Mecanico"], "maq": row["Maquina"],
-            "sub": row["SubRubro"] if pd.notna(row["SubRubro"]) else None,
-            "hs": r1(row["Horas"]), "hst": r1(row["HorasTraslado"]), "hsp": r1(row["HorasPrep"]),
-        } for _, row in g.iterrows()]
+        por_fecha, n_salidas = {}, 0
+        for (_, fdt), gs in g.groupby(["_salida", "FechaDT"], sort=False):
+            lineas = [{
+                "maq": row["Maquina"],
+                "sub": row["SubRubro"] if pd.notna(row["SubRubro"]) else None,
+                "hs": r1(row["Horas"]), "hst": r1(row["HorasTraslado"]),
+                "hsp": r1(row["HorasPrep"]),
+            } for _, row in gs.iterrows()]
+            lineas.sort(key=lambda x: str(x["maq"] or ""))
+            salida = {
+                "mec": gs["Mecanico"].dropna().iloc[0] if gs["Mecanico"].notna().any() else "",
+                "lugar": gs["Taller"].dropna().iloc[0] if gs["Taller"].notna().any() else "",
+                "maqs": int(gs["Maquina"].nunique()),
+                "hs": r1(gs["Horas"].sum()), "hst": r1(gs["HorasTraslado"].sum()),
+                "hsp": r1(gs["HorasPrep"].sum()),
+                "lineas": lineas,
+            }
+            clave = fdt.strftime("%Y-%m-%d")
+            por_fecha.setdefault(clave, {"f": fdt.strftime("%d/%m/%Y"), "salidas": []})
+            por_fecha[clave]["salidas"].append(salida)
+            n_salidas += 1
+
+        # Las fechas, de la mas reciente a la mas vieja; adentro, la salida mas
+        # larga primero, que es la que suele tener algo que contar.
+        fechas = [por_fecha[k] for k in sorted(por_fecha, reverse=True)]
+        for d in fechas:
+            d["salidas"].sort(key=lambda x: -(x["hs"] + x["hst"] + x["hsp"]))
+
         out.append({
-            "n": sup, "visitas": visitas,
-            "t": r1(g["Horas"].sum()), "tr": r1(g["HorasTraslado"].sum()), "p": r1(g["HorasPrep"].sum()),
-            "recs": recs,
+            "n": sup,
+            "salidas": n_salidas,
+            "maqs": int(g["Maquina"].nunique()),
+            "t": r1(g["Horas"].sum()), "tr": r1(g["HorasTraslado"].sum()),
+            "p": r1(g["HorasPrep"].sum()),
+            "fechas": fechas,
         })
     return out
- 
- 
+
+
 # ---------------------------------------------------------------------------
 # Ranking de tractoristas (pestaña "Asistencias a campo")
 # ---------------------------------------------------------------------------
@@ -1141,25 +1211,25 @@ def generar_nota_lider_supervisores(top_supervisores, top_n=3):
     """'RESEO, Walter Eladio lidera la semana con 5 visitas (41 hs entre trabajo,
     traslado y preparación), seguido de VERGARA, Pedro Pablo con 4, y ...'"""
     if not top_supervisores:
-        return "No hubo visitas a campo registradas esta semana."
-    ordenado = sorted(top_supervisores, key=lambda s: (-s["visitas"], -(s["t"] + s["tr"] + s["p"])))
+        return "No hubo salidas a campo registradas esta semana."
+    ordenado = sorted(top_supervisores, key=lambda s: (-s["salidas"], -(s["t"] + s["tr"] + s["p"])))
     lider = ordenado[0]
     total_hs = r1(lider["t"] + lider["tr"] + lider["p"])
-    texto = f"{lider['n']} lidera la semana con {lider['visitas']} visitas ({total_hs:.0f} hs entre trabajo, traslado y preparación)"
+    texto = f"{lider['n']} lidera la semana con {lider['salidas']} salidas ({total_hs:.0f} hs entre trabajo, traslado y preparación)"
     resto = ordenado[1:top_n]
     if resto:
-        # agrupar por igual cantidad de visitas para armar "empate" como en el original
+        # agrupar por igual cantidad de salidas para armar "empate" como en el original
         siguientes = []
         i = 0
         while i < len(resto):
-            visitas = resto[i]["visitas"]
-            empatados = [r for r in resto[i:] if r["visitas"] == visitas]
+            salidas = resto[i]["salidas"]
+            empatados = [r for r in resto[i:] if r["salidas"] == salidas]
             nombres = ", ".join(e["n"] for e in empatados)
             if len(empatados) > 1:
                 etiqueta = {2: "doble", 3: "triple"}.get(len(empatados), "múltiple")
-                siguientes.append(f"un {etiqueta} empate en {visitas} visitas entre {nombres}")
+                siguientes.append(f"un {etiqueta} empate en {salidas} salidas entre {nombres}")
             else:
-                siguientes.append(f"{nombres} con {visitas}")
+                siguientes.append(f"{nombres} con {salidas}")
             i += len(empatados)
         texto += ", seguido de " + ", seguido de ".join(siguientes)
     return texto + "."
