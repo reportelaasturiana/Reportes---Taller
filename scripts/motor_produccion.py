@@ -30,6 +30,7 @@ from motor_agregacion import (
     preparar_horas_df, filtrar_semana, construir_mec_taller, construir_mec_campo,
     construir_rubros_taller, construir_ausentes_nuevos, construir_estados_lf,
     construir_horas_chinagro, construir_maquinas_top, construir_top_supervisores,
+    exportar_filas_campo,
     construir_fluidos, construir_comp_mirar, construir_quincenas, clasificar_fluido,
     construir_revision_diaria, construir_ranking_tractoristas,
     construir_falda_vs_app,
@@ -63,6 +64,11 @@ DIAS_REVISION_DIARIA = 30
 
 # Dias hacia atras del ranking de tractoristas de "Asistencias a campo".
 DIAS_RANKING_TRACTORISTAS = 90
+
+# Desde cuando se exportan las filas de campo que alimentan el filtro de fechas
+# del informe. Es el primer dia con datos en la app; antes de eso no hay nada que
+# mirar. Son ~3.700 filas, que pegadas en el HTML ocupan poco mas de 100 KB.
+DATOS_CAMPO_DESDE = datetime.date(2025, 8, 13)
 
 # Desde cuando se arma el historico mensual de docs/historico.json.
 HISTORICO_DESDE = datetime.date(2025, 8, 1)
@@ -288,21 +294,27 @@ SELECTCOLUMNS(
 """
 
 
-def dax_campo_conductores(desde, hasta):
-    """Salidas a CAMPO con el conductor de la maquina, para el ranking de
-    tractoristas. Va aparte de dax_horas y no como columnas extra de aquella
-    porque solo la necesita este bloque: sumarle 3 columnas a la consulta general
-    engordaria tambien el informe diario, que arrastra 30 dias de tareas.
+def dax_campo_historico(desde, hasta):
+    """Todas las lineas de CAMPO del periodo, con lo que hace falta para armar
+    las salidas en el navegador.
 
-    Campos que trae y hoy no se usaban en ningun lado:
-      [Conductor]       el tractorista, como CUIL (hay que cruzarlo por nombre).
-                        En salidas a campo viene cargado en el 98,7% de las filas.
+    Se pide una sola vez y de ahi salen las dos cosas: el ranking de
+    tractoristas (que recorta a sus 90 dias en pandas) y las filas que se
+    exportan para el filtro de fechas de la pagina.
+
+    Campos que no son obvios:
+      [Conductor]       el tractorista, como CUIL (hay que cruzarlo por nombre
+                        contra Maestro_Empleados). En salidas a campo viene
+                        cargado en el 98,7% de las filas.
       [Tipo_Reparacion] "Rotura" vs "Mantenimiento Campaña". ES el campo util
-                        para separar lo que es culpa de alguien de lo programado.
+                        para separar lo que es culpa de alguien de lo
+                        programado, pero en campo viene casi siempre vacio.
       [Motivo_Rotura]   se trae como referencia, pero NO sirve para detectar
                         negligencia: en 90 dias hay 5.431 "Rotura por Desgaste"
                         contra 15 "Negligencia". Nadie manda al frente al
                         companero eligiendo una opcion de una lista.
+      [RegistroID]      el id de la carga en AppSheet: es lo que agrupa las
+                        lineas de una misma salida.
     """
     return f"""
 EVALUATE
@@ -312,9 +324,12 @@ SELECTCOLUMNS(
         'Horas_Personal_AppSheet'[Fecha] <= {_d(hasta)} &&
         LEFT('Horas_Personal_AppSheet'[Lugar],5) = "CAMPO"
     ),
+    "RegistroID", 'Horas_Personal_AppSheet'[RegistroID],
     "Fecha", 'Horas_Personal_AppSheet'[Fecha],
     "Conductor", 'Horas_Personal_AppSheet'[Conductor],
     "Mecanico", 'Horas_Personal_AppSheet'[Mecánico],
+    "Supervisor", 'Horas_Personal_AppSheet'[Supervisor],
+    "Lugar", 'Horas_Personal_AppSheet'[Lugar],
     "Maquina", 'Horas_Personal_AppSheet'[Máquina],
     "Rubro", 'Horas_Personal_AppSheet'[Rubro],
     "SubRubro", 'Horas_Personal_AppSheet'[Sub Rubro],
@@ -575,8 +590,12 @@ def construir_todo():
         "estados_lf": estados_lf, "horas_chinagro_data": horas_chinagro_data,
         "generado_en": generado_en,
     }
-    # --- Ranking de tractoristas (pestaña "Asistencias a campo") ---
-    df_cond = pbi(dax_campo_conductores(f["desde_conductores"], f["hoy"]))
+    # --- Campo: una sola bajada para el ranking y para el filtro de fechas ---
+    df_campo = pbi(dax_campo_historico(DATOS_CAMPO_DESDE, f["hoy"]))
+    df_campo["FechaDT"] = parsear_fecha_pbi_service(df_campo["Fecha"])
+    df_campo = preparar_horas_df(df_campo)
+    # El ranking mira sus 90 dias; el recorte se hace aca y no en otra consulta.
+    df_cond = df_campo[df_campo["FechaDT"].dt.date >= f["desde_conductores"]]
     df_emp = pbi(DAX_EMPLEADOS)
     # El Conductor llega como texto y el Cuil del maestro como numero: se
     # normalizan los dos a digitos, si no el cruce no engancha nunca.
@@ -589,11 +608,18 @@ def construir_todo():
     print(f"  ranking tractoristas: {len(ranking_tractoristas)} conductores "
           f"sobre {len(df_cond)} salidas a campo de {DIAS_RANKING_TRACTORISTAS} dias")
 
+    # Filas de campo ya clasificadas, para que la pagina pueda cambiar el periodo
+    # sin volver a decidir nada. Ver exportar_filas_campo().
+    filas_campo = exportar_filas_campo(df_campo, empleados=empleados)
+    print(f"  filas de campo exportadas: {len(filas_campo['filas'])} "
+          f"desde {filas_campo['desde']} hasta {filas_campo['hasta']}")
+
     ctx_maquinaria = {
         "sem": sem, "notas": notas_maquinaria, "maquinas_top": maquinas_top,
         "comp_mirar": comp_mirar, "fluidos": fluidos, "top_supervisores": top_supervisores,
         "ranking_tractoristas": ranking_tractoristas,
         "dias_ranking": DIAS_RANKING_TRACTORISTAS,
+        "filas_campo": filas_campo,
         "generado_en": generado_en,
     }
     # --- "La Falda vs App": repuestos sin horas del taller ---

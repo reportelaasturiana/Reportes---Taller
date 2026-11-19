@@ -174,6 +174,19 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .rk-row:hover{box-shadow:var(--sh)}
 .rk-hdr{display:grid;grid-template-columns:30px 1fr 90px 60px;align-items:center;gap:10px;padding:9px 12px;cursor:pointer}
 .rk-body{display:none;background:#fafafa;border-top:1px solid var(--bd);padding:9px 14px}
+/* Filtro de periodo */
+.fbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin-bottom:12px;box-shadow:var(--sh)}
+.fbar label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--s)}
+.fbar select,.fbar input[type=date]{font-family:inherit;font-size:12px;color:var(--t);background:#fff;border:1px solid var(--bd);border-radius:6px;padding:5px 8px}
+.fbar select:focus,.fbar input:focus{outline:2px solid var(--cp);outline-offset:1px}
+.fbar-rango{font-size:11px;color:var(--s2);margin-left:auto;text-align:right}
+.fbar-rango b{color:var(--t)}
+.fbar-parcial{display:inline-block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8a5a00;background:#fdf3e0;border-radius:4px;padding:1px 6px;margin-left:6px}
+.fbar-custom{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--s)}
+.aviso-desync{background:#fdecea;border:1px solid #f2b8b2;border-left:4px solid var(--r);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#8a1f16}
+.aviso-desync b{display:block;margin-bottom:3px;font-size:12.5px}
+.aviso-desync ul{margin:5px 0 0 16px;padding:0}
+
 /* Supervisor -> fecha -> salida */
 .fblq{margin-bottom:6px;background:#fff;border:1px solid var(--bd);border-radius:7px;overflow:hidden}
 .fblq-f{display:flex;align-items:baseline;gap:8px;font-size:12px;font-weight:800;color:var(--t);padding:8px 10px;cursor:pointer}
@@ -385,20 +398,31 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 </div><!-- fin tab m-horas -->
  
 <div id="tab-m-campo" class="tab">
-<div class="sl mb18">🌾 Asistencias a campo — semana {{ sem.rango_corto_guion }}</div>
- 
+<div class="sl mb18">🌾 Asistencias a campo</div>
+
+<div id="aviso-desync" class="aviso-desync" hidden></div>
+<div class="fbar">
+  <label for="per-campo">Período</label>
+  <select id="per-campo"></select>
+  <span id="per-custom" class="fbar-custom" hidden>
+    <input type="date" id="per-desde"><span>a</span><input type="date" id="per-hasta">
+  </span>
+  <span id="per-rango" class="fbar-rango"></span>
+</div>
+
 <div class="card mb18">
-  <div class="ctit">🤝 Supervisores asistidos — semana {{ sem.rango_corto_guion }} · {{ top_supervisores|length }} en total</div>
+  <div class="ctit">🤝 Supervisores asistidos <span id="ctit-campo"></span></div>
   <div class="sec-sub">Están <strong>todos</strong> los supervisores asistidos en la semana, ordenados por cantidad de <strong>salidas</strong> · tocá un supervisor para abrir las fechas en que se lo fue a visitar, y tocá una fecha para ver los mecánicos que salieron y las máquinas de cada viaje</div>
   <div class="sec-sub" style="color:var(--s2)">Una <strong>salida</strong> es una carga del mecánico en la app, no una línea: si en un viaje se asistieron tres máquinas, cuenta como una sola salida y el nombre del mecánico aparece una sola vez, arriba de todo lo que tocó en ese viaje.</div>
   <div class="sec-sub" style="color:var(--s2)"><strong>La Falda</strong>, <strong>Mte. Grande</strong> y <strong>Caspinch.</strong> son el establecimiento al que el mecánico cargó esa línea en la app, no de dónde salió. Una misma salida puede tener líneas de dos establecimientos.</div>
   <div class="sec-sub" style="color:var(--s2)">No se cuentan los <strong>traslados de tractoristas</strong> (es llevar gente, no un mecánico asistiendo una máquina) ni el <strong>mantenimiento de campaña</strong> (estaba programado, no es una rotura que obligó a salir). Quedan afuera del detalle y también de las visitas y las horas.</div>
   <div id="tabla-top-supervisores"></div>
-  <div class="cnota">{{ notas.lider_supervisores }}</div>
+  <div class="cnota" id="nota-supervisores">{{ notas.lider_supervisores }}</div>
 </div>
 
 <div class="card mb18">
   <div class="ctit">🚜 Ranking de tractoristas — últimos {{ dias_ranking }} días</div>
+  <div class="sec-sub" style="color:var(--s2)">Este cuadro <strong>no cambia</strong> con el filtro de período de arriba: la reincidencia necesita varias semanas para distinguirse del ruido, así que siempre mira los últimos {{ dias_ranking }} días.</div>
   <div class="sec-sub">Ordenado por <strong>reincidencia</strong>: cuántas veces hubo que volver a lo mismo, en la misma máquina. Tocá un tractorista para ver el detalle por máquina.</div>
   <div class="sec-sub" style="background:var(--ac);border-left:3px solid var(--a);padding:8px 10px;border-radius:6px;margin-top:6px">
     <strong>Por qué mira el patrón y no el motivo declarado.</strong> En la app casi todos eligen “Rotura por Desgaste”: en {{ dias_ranking }} días hay 5.431 así contra 15 marcadas como “Negligencia”. Nadie manda al frente a un compañero eligiendo una opción de una lista.<br>
@@ -465,7 +489,14 @@ function set(id,h){var e=document.getElementById(id);if(e)e.innerHTML=h;}
 const maquinasTop={{ maquinas_top|tojson }};
 const compMirar={{ comp_mirar|tojson }};
 const fluidos={{ fluidos|tojson }};
-const topSupervisores={{ top_supervisores|tojson }};
+/* Lo que calculo el robot para la semana del informe. Se guarda aparte para
+   poder contrastarlo contra lo que calcula la pagina (ver autocontrol). */
+const topSupervisoresRobot={{ top_supervisores|tojson }};
+let topSupervisores=topSupervisoresRobot;
+const notaRobot={{ notas.lider_supervisores|tojson }};
+const SEMANA={desde:"{{ sem.lunes.isoformat() }}", hasta:"{{ sem.domingo.isoformat() }}",
+              texto:"{{ sem.rango_corto_guion }}"};
+const filasCampo={{ filas_campo|tojson }};
 const rankingTractoristas={{ ranking_tractoristas|tojson }};
 </script>
 <script>
@@ -715,6 +746,99 @@ function build(){
   renderTractoristas();
 }
 build();
+</script>
+
+<script>
+{% include "_periodos.js" %}
+</script>
+<script>
+{% include "_motor_campo.js" %}
+</script>
+
+<script>
+/* ============== FILTRO DE PERIODO DE "ASISTENCIAS A CAMPO" ============== */
+(function(){
+  var sel=document.getElementById('per-campo');
+  if(!sel||!MotorCampo.cargar(filasCampo))return;
+
+  var hoy=new Date();
+  var ultimo=MotorCampo.ultimoDia(), primero=MotorCampo.primerDia();
+  var semDesde=MotorCampo.aDia(SEMANA.desde), semHasta=MotorCampo.aDia(SEMANA.hasta);
+
+  /* La semana del informe va primera y es la que viene marcada: el informe se
+     lee asi todas las semanas. Detras van los periodos estandar de la empresa,
+     en el orden de siempre (periodos.js). */
+  var opciones=[
+    {clave:'semana', etiqueta:'Semana del informe ('+SEMANA.texto+')',
+     desde:semDesde, hasta:semHasta, parcial:false}
+  ].concat(Periodos.lista(hoy));
+
+  opciones.forEach(function(o,i){
+    var op=document.createElement('option');
+    op.value=String(i); op.textContent=o.etiqueta;
+    sel.appendChild(op);
+  });
+
+  var custom=document.getElementById('per-custom');
+  var inpD=document.getElementById('per-desde'), inpH=document.getElementById('per-hasta');
+  function iso(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+  inpD.min=inpH.min=iso(primero); inpD.max=inpH.max=iso(ultimo);
+  inpD.value=iso(semDesde); inpH.value=iso(semHasta);
+
+  function aplicar(){
+    var o=opciones[+sel.value];
+    var desde,hasta,parcial=false;
+    if(o.clave==='rango'){
+      custom.hidden=false;
+      desde=MotorCampo.aDia(inpD.value); hasta=MotorCampo.aDia(inpH.value);
+      if(!(desde<=hasta))return;
+    }else{
+      custom.hidden=true;
+      desde=o.desde; hasta=o.hasta; parcial=!!o.parcial;
+    }
+    topSupervisores=MotorCampo.supervisores(desde,hasta);
+    renderTopSupervisores();
+
+    var n=topSupervisores.length;
+    var sal=topSupervisores.reduce(function(a,s){return a+s.salidas;},0);
+    set('ctit-campo','&mdash; '+MotorCampo.ddmmaaaa(desde)+' al '+MotorCampo.ddmmaaaa(hasta)
+        +' · '+n+(n===1?' supervisor':' supervisores')+' · '+sal
+        +(sal===1?' salida':' salidas'));
+    set('per-rango','Datos hasta el <b>'+MotorCampo.ddmmaaaa(ultimo)+'</b>'
+        +(parcial?'<span class="fbar-parcial">período en curso</span>':''));
+
+    /* La nota larga la escribe el robot y habla de "la semana": solo vale para
+       la semana del informe. Para otro periodo se arma una linea corta aca. */
+    var mismaSemana=(desde.getTime()===semDesde.getTime()&&hasta.getTime()===semHasta.getTime());
+    if(mismaSemana){ set('nota-supervisores',notaRobot); }
+    else if(!n){ set('nota-supervisores','No hubo salidas a campo en el período elegido.'); }
+    else{
+      var lider=topSupervisores.slice().sort(function(a,b){return b.salidas-a.salidas;})[0];
+      set('nota-supervisores',lider.n+' encabeza el período con '+lider.salidas
+          +' salidas ('+Math.round(lider.t+lider.tr+lider.p)+' hs entre trabajo, traslado y preparación).');
+    }
+  }
+
+  sel.addEventListener('change',aplicar);
+  inpD.addEventListener('change',aplicar);
+  inpH.addEventListener('change',aplicar);
+
+  /* --- Autocontrol --- Si la pagina y el robot no dan lo mismo para la semana
+     del informe, hay una regla desincronizada: se avisa en rojo y no se
+     disimula. */
+  var dif=MotorCampo.comparar(topSupervisoresRobot,semDesde,semHasta);
+  if(dif.length){
+    var av=document.getElementById('aviso-desync');
+    av.hidden=false;
+    av.innerHTML='<b>⚠️ Revisar: el filtro no da lo mismo que el informe</b>'
+      +'Para la semana del informe, lo que calcula esta página no coincide con lo que '
+      +'calculó el robot. Los números de abajo pueden estar mal.<ul><li>'
+      +dif.slice(0,6).map(function(t){return t;}).join('</li><li>')+'</li></ul>';
+  }
+
+  sel.value='0';
+  aplicar();
+})();
 </script>
 </body>
 </html>

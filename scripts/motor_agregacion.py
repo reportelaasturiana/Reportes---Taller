@@ -1306,3 +1306,77 @@ def calcular_kpis_taller(df_actual, df_anterior, propiedad_actual):
         "registros_por_usuario": round(registros_totales / usuarios_activos, 1) if usuarios_activos else 0,
     }
     return kpi, kpi_app, talleres
+
+
+# ---------------------------------------------------------------------------
+# Exportacion de filas de campo para el filtro de fechas del navegador
+# ---------------------------------------------------------------------------
+
+def exportar_filas_campo(df, empleados=None):
+    """Filas de campo YA CLASIFICADAS, para que la pagina pueda cambiar el periodo.
+
+    La regla es una sola y vale para todo lo que se exporte asi: el criterio se
+    decide aca, en Python, y el navegador solo filtra por fecha, agrupa y suma.
+    Si la pagina tuviera que decidir que es una asistencia o a que salida
+    pertenece una linea, esas reglas quedarian escritas dos veces y el dia que
+    cambie una sola de las dos el informe empieza a mentir sin romperse.
+
+    Por eso cada fila se va con:
+      sal  el id de la salida (lo resuelve _clave_salida, no el navegador)
+      x    1 si NO cuenta como asistencia (traslados de tractoristas,
+           mantenimiento de campana): el navegador la suma al detalle o no,
+           pero no vuelve a juzgarla
+
+    Formato columnar con diccionarios porque se pega adentro del HTML: los
+    nombres se repiten miles de veces y como indices ocupan la decima parte.
+    """
+    campo = df[df["TipoLugar"] == "CAMPO"].copy()
+    if not len(campo):
+        return {"desde": None, "dic": {}, "filas": []}
+
+    campo = campo[campo["FechaDT"].notna()]
+    campo["_salida"] = campo.apply(_clave_salida, axis=1)
+    campo["_x"] = filas_no_asistencia(campo).astype(int)
+
+    desde = campo["FechaDT"].min().normalize()
+    dic, filas = {}, []
+
+    def idx(clave, valor):
+        """Devuelve la posicion del valor en su diccionario; -1 si viene vacio."""
+        if valor is None or (not isinstance(valor, str) and pd.isna(valor)):
+            return -1
+        texto = str(valor).strip()
+        if not texto:
+            return -1
+        tabla = dic.setdefault(clave, {})
+        if texto not in tabla:
+            tabla[texto] = len(tabla)
+        return tabla[texto]
+
+    empleados = empleados or {}
+    for _, r in campo.iterrows():
+        cuil = str(r.get("Conductor") or "").strip().split(".")[0]
+        filas.append([
+            int((r["FechaDT"].normalize() - desde).days),
+            idx("sal", r["_salida"]),
+            idx("mec", r.get("Mecanico")),
+            idx("sup", r.get("Supervisor")),
+            idx("maq", r.get("Maquina")),
+            idx("sub", r.get("SubRubro")),
+            idx("rub", r.get("Rubro")),
+            idx("lug", r.get("Taller")),
+            idx("con", empleados.get(cuil, cuil)),
+            r1(r.get("Horas")), r1(r.get("HorasTraslado")), r1(r.get("HorasPrep")),
+            int(r["_x"]),
+        ])
+
+    # El diccionario se guarda como lista en el orden de los indices.
+    dic_listas = {}
+    for clave, tabla in dic.items():
+        dic_listas[clave] = [t for t, _ in sorted(tabla.items(), key=lambda kv: kv[1])]
+    return {
+        "desde": desde.strftime("%Y-%m-%d"),
+        "hasta": campo["FechaDT"].max().strftime("%Y-%m-%d"),
+        "dic": dic_listas,
+        "filas": filas,
+    }
